@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<JUCERPROJECT id="RhySpc" name="RhythmicSpace" projectType="audioplug" useAppConfig="0"
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" version="1.0.0"
+              companyName="LATHAMAUDIO" companyCopyright="2025 LATHAMAUDIO"
+              pluginManufacturerCode="Ltha" pluginCode="Rysp" pluginFormats="buildAU,buildStandalone,buildVST3"
+              pluginCharacteristicsValue="pluginWantsMidiIn"
+              pluginName="RhythmicSpace" pluginDesc="Step Sequencer Multi-Effect Processor"
+              pluginManufacturer="LATHAMAUDIO" aaxIdentifier="com.lathamaudio.rhythmicspace"
+              pluginAAXCategory="8" pluginVST3Category="Fx,Modulation" bundleIdentifier="com.lathamaudio.rhythmicspace"
+              displaySplashScreen="1" reportAppUsage="0" splashScreenColour="Dark">
+  <MAINGROUP id="DkVHPl" name="RhythmicSpace">
+    <GROUP id="{SOURCE_GROUP}" name="Source">
+      <GROUP id="{DATA_GROUP}" name="Data">
+        <FILE id="PresetMgrH" name="PresetManager.h" compile="0" resource="0"
+              file="Source/Data/PresetManager.h"/>
+        <FILE id="PresetMgrC" name="PresetManager.cpp" compile="1" resource="0"
+              file="Source/Data/PresetManager.cpp"/>
+        <FILE id="MIDIMapH" name="MIDIControllerMap.h" compile="0" resource="0"
+              file="Source/Data/MIDIControllerMap.h"/>
+        <FILE id="MIDIMapC" name="MIDIControllerMap.cpp" compile="1" resource="0"
+              file="Source/Data/MIDIControllerMap.cpp"/>
+      </GROUP>
+      <GROUP id="{UI_GROUP}" name="UI">
+        <FILE id="LookFeelH" name="MetallicLookAndFeel.h" compile="0" resource="0"
+              file="Source/UI/MetallicLookAndFeel.h"/>
+        <FILE id="LookFeelC" name="MetallicLookAndFeel.cpp" compile="1" resource="0"
+              file="Source/UI/MetallicLookAndFeel.cpp"/>
+        <FILE id="StepSeqCompH" name="StepSequencerComponent.h" compile="0"
+              resource="0" file="Source/UI/StepSequencerComponent.h"/>
+        <FILE id="StepSeqCompC" name="StepSequencerComponent.cpp" compile="1"
+              resource="0" file="Source/UI/StepSequencerComponent.cpp"/>
+        <FILE id="TransCompH" name="TransportComponent.h" compile="0" resource="0"
+              file="Source/UI/TransportComponent.h"/>
+        <FILE id="TransCompC" name="TransportComponent.cpp" compile="1" resource="0"
+              file="Source/UI/TransportComponent.cpp"/>
+        <FILE id="KnobCompH" name="KnobComponent.h" compile="0" resource="0"
+              file="Source/UI/KnobComponent.h"/>
+        <FILE id="KnobCompC" name="KnobComponent.cpp" compile="1" resource="0"
+              file="Source/UI/KnobComponent.cpp"/>
+        <FILE id="FaderCompH" name="FaderComponent.h" compile="0" resource="0"
+              file="Source/UI/FaderComponent.h"/>
+        <FILE id="FaderCompC" name="FaderComponent.cpp" compile="1" resource="0"
+              file="Source/UI/FaderComponent.cpp"/>
+        <FILE id="MeterCompH" name="LevelMeterComponent.h" compile="0" resource="0"
+              file="Source/UI/LevelMeterComponent.h"/>
+        <FILE id="MeterCompC" name="LevelMeterComponent.cpp" compile="1" resource="0"
+              file="Source/UI/LevelMeterComponent.cpp"/>
+        <FILE id="PresetCompH" name="PresetBrowserComponent.h" compile="0"
+              resource="0" file="Source/UI/PresetBrowserComponent.h"/>
+        <FILE id="PresetCompC" name="PresetBrowserComponent.cpp" compile="1"
+              resource="0" file="Source/UI/PresetBrowserComponent.cpp"/>
+        <FILE id="EffectPanelH" name="EffectPanelComponent.h" compile="0"
+              resource="0" file="Source/UI/EffectPanelComponent.h"/>
+        <FILE id="EffectPanelC" name="EffectPanelComponent.cpp" compile="1"
+              resource="0" file="Source/UI/EffectPanelComponent.cpp"/>
+        <FILE id="MIDILearnH" name="MIDILearnComponent.h" compile="0"
+              resource="0" file="Source/UI/MIDILearnComponent.h"/>
+        <FILE id="MIDILearnC" name="MIDILearnComponent.cpp" compile="1"
+              resource="0" file="Source/UI/MIDILearnComponent.cpp"/>
+      </GROUP>
+      <GROUP id="{DSP_GROUP}" name="DSP">
+        <FILE id="StepSeqH" name="StepSequencer.h" compile="0" resource="0"
+              file="Source/DSP/StepSequencer.h"/>
+        <FILE id="StepSeqC" name="StepSequencer.cpp" compile="1" resource="0"
+              file="Source/DSP/StepSequencer.cpp"/>
+        <FILE id="FilterProcH" name="FilterProcessor.h" compile="0" resource="0"
+              file="Source/DSP/FilterProcessor.h"/>
+        <FILE id="FilterProcC" name="FilterProcessor.cpp" compile="1" resource="0"
+              file="Source/DSP/FilterProcessor.cpp"/>
+        <FILE id="DelayProcH" name="DelayProcessor.h" compile="0" resource="0"
+              file="Source/DSP/DelayProcessor.h"/>
+        <FILE id="DelayProcC" name="DelayProcessor.cpp" compile="1" resource="0"
+              file="Source/DSP/DelayProcessor.cpp"/>
+        <FILE id="ReverbProcH" name="ReverbProcessor.h" compile="0" resource="0"
+              file="Source/DSP/ReverbProcessor.h"/>
+        <FILE id="ReverbProcC" name="ReverbProcessor.cpp" compile="1" resource="0"
+              file="Source/DSP/ReverbProcessor.cpp"/>
+        <FILE id="PanProcH" name="PanProcessor.h" compile="0" resource="0"
+              file="Source/DSP/PanProcessor.h"/>
+        <FILE id="PanProcC" name="PanProcessor.cpp" compile="1" resource="0"
+              file="Source/DSP/PanProcessor.cpp"/>
+        <FILE id="VolProcH" name="VolumeProcessor.h" compile="0" resource="0"
+              file="Source/DSP/VolumeProcessor.h"/>
+        <FILE id="VolProcC" name="VolumeProcessor.cpp" compile="1" resource="0"
+              file="Source/DSP/VolumeProcessor.cpp"/>
+      </GROUP>
+      <FILE id="PluginProcH" name="PluginProcessor.h" compile="0" resource="0"
+            file="Source/PluginProcessor.h"/>
+      <FILE id="PluginProcC" name="PluginProcessor.cpp" compile="1" resource="0"
+            file="Source/PluginProcessor.cpp"/>
+      <FILE id="PluginEditH" name="PluginEditor.h" compile="0" resource="0"
+            file="Source/PluginEditor.h"/>
+      <FILE id="PluginEditC" name="PluginEditor.cpp" compile="1" resource="0"
+            file="Source/PluginEditor.cpp"/>
+    </GROUP>
+  </MAINGROUP>
+  <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_VST3_CAN_REPLACE_VST2="0"/>
+  <EXPORTFORMATS>
+    <XCODE_MAC targetFolder="Builds/MacOSX" cppLanguageStandard="17">
+      <CONFIGURATIONS>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="RhythmicSpace"/>
+        <CONFIGURATION isDebug="0" name="Release" targetName="RhythmicSpace" optimisation="3"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_audio_basics" path="/Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_devices" path="/Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_formats" path="/Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_plugin_client" path="/Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_processors" path="/Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_utils" path="/Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_core" path="/Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_data_structures" path="/Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_dsp" path="/Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_events" path="/Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_graphics" path="/Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_basics" path="/Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_extra" path="/Applications/JUCE/modules"/>
+      </MODULEPATHS>
+    </XCODE_MAC>
+    <VS2022 targetFolder="Builds/VisualStudio2022">
+      <CONFIGURATIONS>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="RhythmicSpace"/>
+        <CONFIGURATION isDebug="0" name="Release" targetName="RhythmicSpace" optimisation="3"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_audio_basics" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_devices" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_formats" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_plugin_client" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_processors" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_utils" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_core" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_data_structures" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_dsp" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_events" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_graphics" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_gui_basics" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_gui_extra" path="../JUCE/modules"/>
+      </MODULEPATHS>
+    </VS2022>
+    <LINUX_MAKE targetFolder="Builds/LinuxMakefile">
+      <CONFIGURATIONS>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="RhythmicSpace"/>
+        <CONFIGURATION isDebug="0" name="Release" targetName="RhythmicSpace" optimisation="3"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_audio_basics" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_devices" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_formats" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_plugin_client" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_processors" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_utils" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_core" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_data_structures" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_dsp" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_events" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_graphics" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_gui_basics" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_gui_extra" path="../JUCE/modules"/>
+      </MODULEPATHS>
+    </LINUX_MAKE>
+    <XCODE_IPHONE targetFolder="Builds/iOS" iosScreenOrientation="UIInterfaceOrientationLandscapeLeft,UIInterfaceOrientationLandscapeRight"
+                  iPadScreenOrientation="UIInterfaceOrientationLandscapeLeft,UIInterfaceOrientationLandscapeRight"
+                  iosBackgroundAudio="1" iosBackgroundBle="0" iPhoneScreenOrientation="UIInterfaceOrientationLandscapeLeft,UIInterfaceOrientationLandscapeRight"
+                  customPListPreprocessorDefinitions="" pListPreprocess="0" microphonePermissionNeeded="1"
+                  cameraPermissionNeeded="0" iosDevelopmentTeamID="" iosAppGroupsEnabled="0">
+      <CONFIGURATIONS>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="RhythmicSpace" iosCompatibleVersion="13.0"/>
+        <CONFIGURATION isDebug="0" name="Release" targetName="RhythmicSpace" optimisation="3" iosCompatibleVersion="13.0"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_audio_basics" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_devices" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_formats" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_plugin_client" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_processors" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_utils" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_core" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_data_structures" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_dsp" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_events" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_graphics" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_gui_basics" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_gui_extra" path="../JUCE/modules"/>
+      </MODULEPATHS>
+    </XCODE_IPHONE>
+  </EXPORTFORMATS>
+  <MODULES>
+    <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_devices" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_formats" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_plugin_client" showAllCode="1" useLocalCopy="0"
+            useGlobalPath="1"/>
+    <MODULE id="juce_audio_processors" showAllCode="1" useLocalCopy="0"
+            useGlobalPath="1"/>
+    <MODULE id="juce_audio_utils" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_core" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_dsp" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_events" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_graphics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_gui_extra" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+  </MODULES>
+</JUCERPROJECT>

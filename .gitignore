@@ -1,0 +1,19 @@
+# Build outputs
+Builds/
+build/
+*.o
+*.d
+
+# IDE
+.vs/
+*.xcworkspace/
+*.xcuserdata/
+xcuserdata/
+DerivedData/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# JUCE generated
+JuceLibraryCode/

@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LATHAMAUDIO: RhythmicSpace — Download</title>
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --surface: #12121a;
+            --surface2: #1a1a26;
+            --border: #2a2a3a;
+            --accent: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.3);
+            --text: #e4e4ed;
+            --text-dim: #8888a0;
+            --green: #22c55e;
+            --amber: #f59e0b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Subtle grid background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image:
+                linear-gradient(rgba(99, 102, 241, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(99, 102, 241, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 0 24px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Hero */
+        .hero {
+            text-align: center;
+            padding: 80px 0 60px;
+        }
+
+        .brand {
+            font-size: 11px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+
+        h1 {
+            font-size: clamp(40px, 6vw, 64px);
+            font-weight: 700;
+            letter-spacing: -1.5px;
+            background: linear-gradient(135deg, #e4e4ed, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 16px;
+        }
+
+        .tagline {
+            font-size: 18px;
+            color: var(--text-dim);
+            max-width: 500px;
+            margin: 0 auto 40px;
+            line-height: 1.6;
+        }
+
+        .version-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            padding: 8px 20px;
+            font-size: 13px;
+            color: var(--text-dim);
+        }
+
+        .version-badge .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--green);
+        }
+
+        /* Feature grid */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 60px 0;
+        }
+
+        .feature {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .feature-icon {
+            font-size: 28px;
+            margin-bottom: 12px;
+        }
+
+        .feature h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .feature p {
+            font-size: 12px;
+            color: var(--text-dim);
+            line-height: 1.5;
+        }
+
+        /* Downloads */
+        .downloads {
+            margin: 60px 0;
+        }
+
+        .downloads h2 {
+            font-size: 28px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .downloads .sub {
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 14px;
+            margin-bottom: 40px;
+        }
+
+        .download-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .download-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .download-card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 30px var(--accent-glow);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .format-label {
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .platform-tag {
+            font-size: 11px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            background: var(--surface2);
+            padding: 4px 10px;
+            border-radius: 6px;
+        }
+
+        .card-desc {
+            font-size: 13px;
+            color: var(--text-dim);
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .install-path {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 11px;
+            color: var(--accent);
+            background: rgba(99, 102, 241, 0.08);
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            word-break: break-all;
+        }
+
+        .download-btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            background: var(--accent);
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+
+        .download-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .download-btn.disabled {
+            background: var(--surface2);
+            color: var(--text-dim);
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .btn-note {
+            text-align: center;
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-top: 10px;
+        }
+
+        /* Specs */
+        .specs {
+            margin: 80px 0 60px;
+        }
+
+        .specs h2 {
+            font-size: 28px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .spec-table {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .spec-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+
+        .spec-row:last-child { border-bottom: none; }
+        .spec-row .label { color: var(--text-dim); }
+        .spec-row .value { font-weight: 500; }
+
+        /* Presets */
+        .presets {
+            margin: 60px 0;
+        }
+
+        .presets h2 {
+            font-size: 28px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .preset-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .preset-chip {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            padding: 8px 18px;
+            font-size: 13px;
+            color: var(--text-dim);
+            transition: border-color 0.2s, color 0.2s;
+        }
+
+        .preset-chip:hover {
+            border-color: var(--accent);
+            color: var(--text);
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 60px 0 40px;
+            border-top: 1px solid var(--border);
+            margin-top: 60px;
+        }
+
+        footer p {
+            font-size: 13px;
+            color: var(--text-dim);
+        }
+
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        footer a:hover { text-decoration: underline; }
+
+        @media (max-width: 640px) {
+            .hero { padding: 60px 0 40px; }
+            .download-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <section class="hero">
+        <div class="brand">LATHAMAUDIO</div>
+        <h1>RhythmicSpace</h1>
+        <p class="tagline">Step sequencer meets multi-effect processor. Five rhythmic lanes. One plugin. Infinite movement.</p>
+        <div class="version-badge">
+            <span class="dot"></span>
+            Version 1.0.0 · macOS
+        </div>
+    </section>
+
+    <section class="features">
+        <div class="feature">
+            <div class="feature-icon">🎛️</div>
+            <h3>5 Effect Lanes</h3>
+            <p>Filter, Delay, Reverb, Pan, Volume — each with independent step sequencer control</p>
+        </div>
+        <div class="feature">
+            <div class="feature-icon">🎹</div>
+            <h3>MIDI Learn</h3>
+            <p>Right-click any knob to assign hardware controllers instantly</p>
+        </div>
+        <div class="feature">
+            <div class="feature-icon">🎨</div>
+            <h3>15 Factory Presets</h3>
+            <p>From subtle modulation to extreme helicopter effects, instantly usable</p>
+        </div>
+        <div class="feature">
+            <div class="feature-icon">⏱️</div>
+            <h3>Host Sync</h3>
+            <p>Lock to DAW tempo for perfectly timed rhythmic processing</p>
+        </div>
+    </section>
+
+    <section class="downloads">
+        <h2>Download</h2>
+        <p class="sub">macOS 10.13+ · Intel & Apple Silicon</p>
+
+        <div class="download-grid">
+            <div class="download-card">
+                <div class="card-header">
+                    <span class="format-label">Audio Unit</span>
+                    <span class="platform-tag">macOS</span>
+                </div>
+                <p class="card-desc">For Logic Pro, GarageBand, and any AU-compatible host. Includes full MIDI Learn support.</p>
+                <div class="install-path">~/Library/Audio/Plug-Ins/Components/</div>
+                <a href="https://github.com/simonlatham155-tech/RhythmicSpace/releases/latest/download/RhythmicSpace-AU-macOS-v1.0.0.zip" class="download-btn">
+                    ↓ Download AU Plugin
+                </a>
+                <p class="btn-note">RhythmicSpace.component · ~10 MB</p>
+            </div>
+
+            <div class="download-card">
+                <div class="card-header">
+                    <span class="format-label">VST3</span>
+                    <span class="platform-tag">macOS</span>
+                </div>
+                <p class="card-desc">For Ableton Live, FL Studio, Cubase, Reaper, and any VST3-compatible host.</p>
+                <div class="install-path">~/Library/Audio/Plug-Ins/VST3/</div>
+                <a href="https://github.com/simonlatham155-tech/RhythmicSpace/releases/latest/download/RhythmicSpace-VST3-macOS-v1.0.0.zip" class="download-btn">
+                    ↓ Download VST3 Plugin
+                </a>
+                <p class="btn-note">RhythmicSpace.vst3 · ~10 MB</p>
+            </div>
+
+            <div class="download-card">
+                <div class="card-header">
+                    <span class="format-label">Standalone</span>
+                    <span class="platform-tag">macOS</span>
+                </div>
+                <p class="card-desc">Run RhythmicSpace as a standalone application — no DAW required. Great for live performance.</p>
+                <div class="install-path">/Applications/</div>
+                <a href="https://github.com/simonlatham155-tech/RhythmicSpace/releases/latest/download/RhythmicSpace-Standalone-macOS-v1.0.0.zip" class="download-btn">
+                    ↓ Download Standalone App
+                </a>
+                <p class="btn-note">RhythmicSpace.app · ~10 MB</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="presets">
+        <h2>Factory Presets</h2>
+        <div class="preset-grid">
+            <span class="preset-chip">Modulation</span>
+            <span class="preset-chip">Auto Pan</span>
+            <span class="preset-chip">Filter Sweep</span>
+            <span class="preset-chip">Experimental</span>
+            <span class="preset-chip">Drum Bounce</span>
+            <span class="preset-chip">Helicopter</span>
+            <span class="preset-chip">Build-Up</span>
+            <span class="preset-chip">Stereo Wobble</span>
+            <span class="preset-chip">Lo-Fi Crush</span>
+            <span class="preset-chip">Ambient</span>
+            <span class="preset-chip">FilterSteps</span>
+            <span class="preset-chip">PanSteps</span>
+            <span class="preset-chip">DelaySteps</span>
+            <span class="preset-chip">ReverbSteps</span>
+            <span class="preset-chip">VolumeSteps</span>
+        </div>
+    </section>
+
+    <section class="specs">
+        <h2>Technical Specs</h2>
+        <div class="spec-table">
+            <div class="spec-row">
+                <span class="label">Plugin Name</span>
+                <span class="value">LATHAMAUDIO: RhythmicSpace</span>
+            </div>
+            <div class="spec-row">
+                <span class="label">Version</span>
+                <span class="value">1.0.0</span>
+            </div>
+            <div class="spec-row">
+                <span class="label">Formats</span>
+                <span class="value">AU · VST3 · Standalone</span>
+            </div>
+            <div class="spec-row">
+                <span class="label">Platform</span>
+                <span class="value">macOS 10.13+</span>
+            </div>
+            <div class="spec-row">
+                <span class="label">Engine</span>
+                <span class="value">JUCE 8.0.10</span>
+            </div>
+            <div class="spec-row">
+                <span class="label">Bundle ID</span>
+                <span class="value">com.lathamaudio.rhythmicspace</span>
+            </div>
+            <div class="spec-row">
+                <span class="label">Manufacturer Code</span>
+                <span class="value">Ltha</span>
+            </div>
+            <div class="spec-row">
+                <span class="label">VST3 Category</span>
+                <span class="value">Fx · Modulation</span>
+            </div>
+            <div class="spec-row">
+                <span class="label">MIDI</span>
+                <span class="value">Input (MIDI Learn)</span>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<footer>
+    <div class="container">
+        <p>© 2025 LATHAMAUDIO · <a href="https://github.com/simonlatham155-tech/RhythmicSpace">Source on GitHub</a></p>
+    </div>
+</footer>
+
+</body>
+</html>
