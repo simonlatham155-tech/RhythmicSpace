@@ -66,6 +66,7 @@ public:
     void advance(int numSamples);
     int getSamplesUntilNextStep() const;
     void reset();
+    void syncToHostPpq(double ppqPosition);
     
     // Transport
     void setBPM(double newBPM);

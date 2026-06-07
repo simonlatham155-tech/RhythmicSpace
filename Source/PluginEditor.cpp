@@ -324,7 +324,9 @@ void RhythmicSpaceAudioProcessorEditor::timerCallback()
     reverbStepSequencer->setCurrentStep(currentStep);
     volumeStepSequencer->setCurrentStep(currentStep);
     
-    // Update level meters
+    if (audioProcessor.isHostSyncEnabled())
+        transport->syncFromProcessor();
+
     inputMeter->setLevel(audioProcessor.getInputLevel());
     outputMeter->setLevel(audioProcessor.getOutputLevel());
     

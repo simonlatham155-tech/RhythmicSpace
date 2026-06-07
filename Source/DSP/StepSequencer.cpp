@@ -54,6 +54,22 @@ void StepSequencer::reset()
     sampleCounter = 0;
 }
 
+void StepSequencer::syncToHostPpq(double ppqPosition)
+{
+    const double sixteenthPosition = ppqPosition * 4.0;
+    const auto wholeSteps = static_cast<int64_t>(std::floor(sixteenthPosition));
+
+    int step = static_cast<int>(wholeSteps % NUM_STEPS);
+    if (step < 0)
+        step += NUM_STEPS;
+
+    currentStep = step;
+
+    const double fraction = sixteenthPosition - std::floor(sixteenthPosition);
+    sampleCounter = juce::jlimit(0, juce::jmax(0, samplesPerStep - 1),
+                                   static_cast<int>(std::round(fraction * samplesPerStep)));
+}
+
 //==============================================================================
 void StepSequencer::setBPM(double newBPM)
 {

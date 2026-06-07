@@ -64,6 +64,8 @@
               file="Source/DSP/StepSequencer.h"/>
         <FILE id="StepSeqC" name="StepSequencer.cpp" compile="1" resource="0"
               file="Source/DSP/StepSequencer.cpp"/>
+        <FILE id="ModSmoothH" name="ModulationSmoother.h" compile="0" resource="0"
+              file="Source/DSP/ModulationSmoother.h"/>
         <FILE id="FilterProcH" name="FilterProcessor.h" compile="0" resource="0"
               file="Source/DSP/FilterProcessor.h"/>
         <FILE id="FilterProcC" name="FilterProcessor.cpp" compile="1" resource="0"

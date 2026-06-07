@@ -7,29 +7,36 @@ A JUCE-based audio plugin that combines a step sequencer with five independent e
 ## Features
 
 - **5 Effect Modules:** Filter, Delay, Reverb, Pan, Volume — each with its own step sequencer lane
-- **MIDI Learn:** Right-click any knob to assign a MIDI controller
-- **15 Factory Presets:** Modulation, Auto Pan, Filter Sweep, Experimental, Drum Bounce, Helicopter, Build-Up, Stereo Wobble, Lo-Fi Crush, Ambient, FilterSteps, PanSteps, DelaySteps, ReverbSteps, VolumeSteps
+- **MIDI Learn:** Right-click any knob to assign a MIDI controller (mappings saved with your DAW project)
+- **24 Factory Presets:** Filter Wobble, Stutter Gate, Auto Pan, Helicopter, Lo-Fi Crush, Breakbeat Shuffle, and more
 - **Preset Browser:** Save, load, and delete custom presets
-- **Transport Sync:** Lock to host tempo
-- **Level Metering:** Real-time input/output monitoring
+- **Host Sync:** Lock to DAW tempo and playhead position
+- **Level Metering:** Real-time stereo input/output monitoring
 
 ## Plugin Formats
 
 | Format | Status |
 |--------|--------|
 | Audio Unit (AU) | ✅ macOS |
-| VST3 | ✅ macOS / Windows |
+| VST3 | ✅ macOS (Windows build planned) |
 | Standalone | ✅ macOS |
 
 ## Parameters
 
 | Module | Parameters |
 |--------|-----------|
-| **Filter** | Cutoff, Resonance, Wobble, Mix |
-| **Delay** | Time, Feedback, Mix |
-| **Reverb** | Amount, Damping, Size, Mix |
-| **Pan** | Rate, Width, Position |
-| **Volume** | Amount, Gate |
+| **Filter** | Cutoff, Resonance, Type (LP/HP/BP), Mix |
+| **Delay** | Time (ms), Feedback, Mix |
+| **Reverb** | Size, Damping, Mix |
+| **Pan** | Width, Rate (LFO) |
+| **Volume** | Amount |
+| **Global** | Master Volume, BPM, Transport Play/Stop |
+
+Each effect lane also has a 16-step sequencer that modulates that effect rhythmically.
+
+## Factory Presets
+
+Filter Wobble · Stutter Gate · Ping Pong Delay · Space Reverb · Tremolo · Auto Pan · Filter Sweep · Glitch Stutter · Drum Bounce · Subtle Movement · Helicopter · Reverse Swell · Triplet Groove · Phaser · Sidechain Pump · Dramatic Riser · Stereo Width · Lo-Fi Crush · Eighth Note Delay · Bass Wobble (Slow) · Arpeggiated Pan · Rhythmic Chop · Ambient Wash · Breakbeat Shuffle
 
 ## Download
 

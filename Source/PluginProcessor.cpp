@@ -162,6 +162,7 @@ void RhythmicSpaceAudioProcessor::prepareToPlay (double sampleRate, int samplesP
     spec.numChannels = 2;
     
     stepSequencer.prepare(sampleRate, bpm.load());
+    modulationSmoother.prepare(sampleRate);
     filterProcessor.prepare(spec);
     delayProcessor.prepare(spec);
     reverbProcessor.prepare(spec);
@@ -219,16 +220,19 @@ void RhythmicSpaceAudioProcessor::updateHostTransportState()
             }
 
             if (position->getIsPlaying().hasValue())
+                playing.store(*position->getIsPlaying());
+
+            if (position->getPpqPosition().hasValue())
             {
-                const bool hostPlaying = *position->getIsPlaying();
+                const double hostPpq = *position->getPpqPosition();
+                const bool hostPlaying = playing.load();
+                const bool hostJumped = lastHostPpq < 0.0
+                                     || std::abs(hostPpq - lastHostPpq) > 0.25;
 
-                if (hostPlaying != playing.load())
-                {
-                    if (hostPlaying)
-                        stepSequencer.reset();
+                if (hostPlaying || hostJumped)
+                    stepSequencer.syncToHostPpq(hostPpq);
 
-                    playing.store(hostPlaying);
-                }
+                lastHostPpq = hostPpq;
             }
         }
     }
@@ -308,16 +312,18 @@ void RhythmicSpaceAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer
         int samplesToProcess = stepSequencer.getSamplesUntilNextStep();
         samplesToProcess = juce::jmin(samplesToProcess, numSamples - startSample);
 
-        if (playing.load())
+        if (! hostSyncEnabled.load() && playing.load())
             stepSequencer.advance(samplesToProcess);
 
         const auto modValues = stepSequencer.getCurrentModulationValues();
+        modulationSmoother.setTargets(modValues);
+        const auto smoothedMod = modulationSmoother.advance(samplesToProcess);
 
         juce::dsp::AudioBlock<float> fullBlock(buffer);
         auto subBlock = fullBlock.getSubBlock((size_t) startSample, (size_t) samplesToProcess);
         juce::dsp::ProcessContextReplacing<float> context(subBlock);
 
-        processEffectChain(context, modValues);
+        processEffectChain(context, smoothedMod);
         subBlock.multiplyBy(masterVol);
 
         startSample += samplesToProcess;
@@ -438,6 +444,9 @@ void RhythmicSpaceAudioProcessor::setBPM(double newBPM)
 void RhythmicSpaceAudioProcessor::setHostSyncEnabled(bool enabled)
 {
     hostSyncEnabled.store(enabled);
+
+    if (enabled)
+        lastHostPpq = -1.0;
 }
 
 void RhythmicSpaceAudioProcessor::loadPreset(int presetIndex)

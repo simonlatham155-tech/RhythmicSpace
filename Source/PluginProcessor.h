@@ -2,6 +2,7 @@
 
 #include <JuceHeader.h>
 #include "DSP/StepSequencer.h"
+#include "DSP/ModulationSmoother.h"
 #include "DSP/FilterProcessor.h"
 #include "DSP/DelayProcessor.h"
 #include "DSP/ReverbProcessor.h"
@@ -85,6 +86,7 @@ public:
 
 private:
     StepSequencer stepSequencer;
+    ModulationSmoother modulationSmoother;
     FilterProcessor filterProcessor;
     DelayProcessor delayProcessor;
     ReverbProcessor reverbProcessor;
@@ -105,6 +107,7 @@ private:
     
     int currentProgramIndex = 0;
     double currentSampleRate = 44100.0;
+    double lastHostPpq = -1.0;
     
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     void syncRuntimeStateFromParameters();
