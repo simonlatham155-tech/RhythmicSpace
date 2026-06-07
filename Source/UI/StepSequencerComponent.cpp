@@ -22,7 +22,12 @@ void StepSequencerComponent::setStepValue(int stepIndex, float value)
 {
     if (stepIndex >= 0 && stepIndex < NUM_STEPS)
     {
-        stepValues[stepIndex] = juce::jlimit(MIN_VALUE, MAX_VALUE, value);
+        const float clampedValue = juce::jlimit(MIN_VALUE, MAX_VALUE, value);
+
+        if (juce::approximatelyEqual(stepValues[stepIndex], clampedValue))
+            return;
+
+        stepValues[stepIndex] = clampedValue;
         repaint();
         
         if (onStepChanged)

@@ -6,50 +6,31 @@ PresetBrowserComponent::PresetBrowserComponent(PresetManager& pm,
                                                RhythmicSpaceAudioProcessor& proc)
     : presetManager(pm), processor(proc)
 {
-    // Category removed to save space - showing all presets
-    // categoryLabel.setText("CATEGORY", juce::dontSendNotification);
-    // categoryLabel.setJustificationType(juce::Justification::centredLeft);
-    // categoryLabel.setColour(juce::Label::textColourId, MetallicLookAndFeel::TEXT_SECONDARY);
-    // addAndMakeVisible(categoryLabel);
-    
-    // categoryCombo.addItem("All", 1);
-    // auto categories = presetManager.getCategories();
-    // for (int i = 0; i < categories.size(); ++i)
-    //     categoryCombo.addItem(categories[i], i + 2);
-    // categoryCombo.setSelectedId(1);
-    // categoryCombo.addListener(this);
-    // addAndMakeVisible(categoryCombo);
-    
-    // Preset label
     presetLabel.setText("PRESET", juce::dontSendNotification);
     presetLabel.setJustificationType(juce::Justification::centredLeft);
     presetLabel.setColour(juce::Label::textColourId, MetallicLookAndFeel::TEXT_SECONDARY);
     addAndMakeVisible(presetLabel);
     
-    // Preset combo
     presetCombo.addListener(this);
     addAndMakeVisible(presetCombo);
     
-    // Save button
     saveButton.setButtonText("SAVE");
     saveButton.addListener(this);
     saveButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff4a4a4a));
     saveButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
     addAndMakeVisible(saveButton);
     
-    // Delete button
     deleteButton.setButtonText("DELETE");
     deleteButton.addListener(this);
     deleteButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff4a4a4a));
     deleteButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
     addAndMakeVisible(deleteButton);
     
-    updatePresetList();
+    refreshPresetList(processor.getCurrentProgram(), juce::dontSendNotification);
 }
 
 PresetBrowserComponent::~PresetBrowserComponent()
 {
-    // categoryCombo.removeListener(this);
     presetCombo.removeListener(this);
     saveButton.removeListener(this);
     deleteButton.removeListener(this);
@@ -58,76 +39,41 @@ PresetBrowserComponent::~PresetBrowserComponent()
 //==============================================================================
 void PresetBrowserComponent::paint(juce::Graphics& g)
 {
-    auto bounds = getLocalBounds();
-    MetallicLookAndFeel::drawRecessedPanel(g, bounds);
-    
-    // Title removed to save space
-    // auto titleArea = bounds.removeFromTop(40);
-    // MetallicLookAndFeel::drawEmbossedText(g, "PRESETS", titleArea,
-    //                                       juce::Justification::centred);
-    
-    // Debug: Draw button area outline (temporary for debugging)
-    #if JUCE_DEBUG
-    g.setColour(juce::Colours::red);
-    g.drawRect(saveButton.getBounds(), 2);
-    g.setColour(juce::Colours::green);
-    g.drawRect(deleteButton.getBounds(), 2);
-    #endif
+    MetallicLookAndFeel::drawRecessedPanel(g, getLocalBounds());
 }
 
 void PresetBrowserComponent::resized()
 {
     auto area = getLocalBounds().reduced(10);
     
-    // Debug: Log component size
-    DBG("PresetBrowserComponent size: " << getWidth() << "x" << getHeight());
-    
-    // Title space removed - start directly with preset controls
-    // area.removeFromTop(35); 
-    
-    // Category section removed to save space
-    // categoryLabel.setBounds(area.removeFromTop(20));
-    // area.removeFromTop(5);
-    // categoryCombo.setBounds(area.removeFromTop(30));
-    
-    area.removeFromTop(8);  // Minimal top margin
+    area.removeFromTop(8);
     presetLabel.setBounds(area.removeFromTop(18));
     area.removeFromTop(4);
     presetCombo.setBounds(area.removeFromTop(28));
     
-    area.removeFromTop(12); // Space before buttons
+    area.removeFromTop(12);
     auto buttonArea = area.removeFromTop(28);
     
-    // Split buttons evenly
-    auto saveButtonBounds = buttonArea.removeFromLeft(buttonArea.getWidth() / 2 - 5);
-    DBG("Save button bounds: " << saveButtonBounds.toString());
-    saveButton.setBounds(saveButtonBounds);
-    
-    buttonArea.removeFromLeft(10); // Gap between buttons
-    DBG("Delete button bounds: " << buttonArea.toString());
+    saveButton.setBounds(buttonArea.removeFromLeft(buttonArea.getWidth() / 2 - 5));
+    buttonArea.removeFromLeft(10);
     deleteButton.setBounds(buttonArea);
-    
-    DBG("Save button visible: " << (saveButton.isVisible() ? "YES" : "NO"));
-    DBG("Delete button visible: " << (deleteButton.isVisible() ? "YES" : "NO"));
 }
 
 //==============================================================================
 void PresetBrowserComponent::comboBoxChanged(juce::ComboBox* comboBox)
 {
-    // Category filtering removed - only handle preset changes now
     if (comboBox == &presetCombo)
     {
-        int presetIndex = presetCombo.getSelectedId() - 1;
+        const int presetIndex = presetCombo.getSelectedId() - 1;
         if (presetIndex >= 0)
             processor.loadPreset(presetIndex);
     }
 }
 
-void PresetBrowserComponent::updatePresetList()
+void PresetBrowserComponent::refreshPresetList(int selectedIndex, juce::NotificationType notification)
 {
-    presetCombo.clear();
+    presetCombo.clear(juce::dontSendNotification);
     
-    // Show all presets (category filtering removed)
     for (int i = 0; i < presetManager.getNumPresets(); ++i)
     {
         if (auto* preset = presetManager.getPreset(i))
@@ -135,7 +81,11 @@ void PresetBrowserComponent::updatePresetList()
     }
     
     if (presetCombo.getNumItems() > 0)
-        presetCombo.setSelectedId(1);
+    {
+        int selectedId = selectedIndex >= 0 ? selectedIndex + 1 : 1;
+        selectedId = juce::jlimit(1, presetCombo.getNumItems(), selectedId);
+        presetCombo.setSelectedId(selectedId, notification);
+    }
 }
 
 void PresetBrowserComponent::buttonClicked(juce::Button* button)
@@ -146,11 +96,11 @@ void PresetBrowserComponent::buttonClicked(juce::Button* button)
     }
     else if (button == &deleteButton)
     {
-        int presetIndex = presetCombo.getSelectedId() - 1;
-        if (presetIndex >= 0)
+        const int presetIndex = presetCombo.getSelectedId() - 1;
+
+        if (presetIndex >= presetManager.getFactoryPresetCount())
         {
-            auto* preset = presetManager.getPreset(presetIndex);
-            if (preset && preset->category == "User")
+            if (auto* preset = presetManager.getPreset(presetIndex))
             {
                 juce::AlertWindow::showOkCancelBox(
                     juce::AlertWindow::QuestionIcon,
@@ -159,22 +109,23 @@ void PresetBrowserComponent::buttonClicked(juce::Button* button)
                     "Delete", "Cancel",
                     nullptr,
                     juce::ModalCallbackFunction::create([this, presetIndex](int result) {
-                        if (result == 1) // OK button
+                        if (result == 1)
                         {
                             presetManager.deleteUserPreset(presetIndex);
-                            updatePresetList();
+                            refreshPresetList(juce::jmin(presetIndex, presetManager.getNumPresets() - 1),
+                                              juce::dontSendNotification);
                         }
                     })
                 );
             }
-            else
-            {
-                juce::AlertWindow::showMessageBoxAsync(
-                    juce::AlertWindow::InfoIcon,
-                    "Cannot Delete",
-                    "You can only delete user presets, not factory presets."
-                );
-            }
+        }
+        else
+        {
+            juce::AlertWindow::showMessageBoxAsync(
+                juce::AlertWindow::InfoIcon,
+                "Cannot Delete",
+                "You can only delete user presets, not factory presets."
+            );
         }
     }
 }
@@ -198,7 +149,6 @@ void PresetBrowserComponent::showSavePresetDialog()
             
             if (presetName.isNotEmpty())
             {
-                // Create preset from current state
                 auto preset = presetManager.createPresetFromCurrentState(
                     presetName,
                     category,
@@ -206,13 +156,21 @@ void PresetBrowserComponent::showSavePresetDialog()
                     processor.getParameters()
                 );
                 
-                // Save it
                 presetManager.saveUserPreset(preset);
                 
-                // Update UI
-                updatePresetList();
+                int savedIndex = -1;
+                for (int i = 0; i < presetManager.getNumPresets(); ++i)
+                {
+                    if (auto* savedPreset = presetManager.getPreset(i); savedPreset && savedPreset->name == presetName)
+                    {
+                        savedIndex = i;
+                        break;
+                    }
+                }
+
+                processor.loadPreset(savedIndex);
+                refreshPresetList(savedIndex, juce::dontSendNotification);
                 
-                // Show confirmation
                 juce::AlertWindow::showMessageBoxAsync(
                     juce::AlertWindow::InfoIcon,
                     "Preset Saved",

@@ -1,6 +1,17 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+namespace
+{
+    void setParameterValue(juce::AudioProcessorValueTreeState& apvts,
+                           const juce::String& parameterID,
+                           float value)
+    {
+        if (auto* param = apvts.getParameter(parameterID))
+            param->setValueNotifyingHost(param->convertTo0to1(value));
+    }
+}
+
 //==============================================================================
 RhythmicSpaceAudioProcessor::RhythmicSpaceAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -18,8 +29,6 @@ RhythmicSpaceAudioProcessor::RhythmicSpaceAudioProcessor()
 #endif
     parameters(*this, nullptr, "PARAMETERS", createParameterLayout())
 {
-    // Don't load preset in constructor - causes JUCE assertion
-    // Parameters are already initialized with defaults from createParameterLayout()
 }
 
 RhythmicSpaceAudioProcessor::~RhythmicSpaceAudioProcessor()
@@ -31,13 +40,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout RhythmicSpaceAudioProcessor:
 {
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
     
-    // Transport
     params.push_back(std::make_unique<juce::AudioParameterBool>(
         juce::ParameterID("playing", 1), "Playing", false));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("bpm", 1), "BPM", 60.0f, 240.0f, 120.0f));
     
-    // Filter parameters
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("filterCutoff", 1), "Filter Cutoff", 20.0f, 20000.0f, 1000.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
@@ -48,7 +55,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout RhythmicSpaceAudioProcessor:
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("filterMix", 1), "Filter Mix", 0.0f, 100.0f, 50.0f));
     
-    // Delay parameters
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("delayTime", 1), "Delay Time", 0.0f, 2000.0f, 500.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
@@ -56,7 +62,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout RhythmicSpaceAudioProcessor:
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("delayMix", 1), "Delay Mix", 0.0f, 100.0f, 30.0f));
     
-    // Reverb parameters
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("reverbSize", 1), "Reverb Size", 0.0f, 100.0f, 50.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
@@ -64,13 +69,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout RhythmicSpaceAudioProcessor:
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("reverbMix", 1), "Reverb Mix", 0.0f, 100.0f, 25.0f));
     
-    // Pan parameters
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("panWidth", 1), "Pan Width", 0.0f, 100.0f, 50.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("panRate", 1), "Pan Rate", 0.0f, 100.0f, 50.0f));
     
-    // Volume parameters
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("volumeAmount", 1), "Volume Amount", 0.0f, 100.0f, 50.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
@@ -114,7 +117,11 @@ bool RhythmicSpaceAudioProcessor::isMidiEffect() const
 
 double RhythmicSpaceAudioProcessor::getTailLengthSeconds() const
 {
-    return 0.0;
+    const float delaySeconds = parameters.getRawParameterValue("delayTime")->load() / 1000.0f;
+    const float feedback = parameters.getRawParameterValue("delayFeedback")->load() / 100.0f;
+    const float delayTail = delaySeconds * (1.0f + feedback * 4.0f);
+    constexpr double reverbTail = 3.0;
+    return static_cast<double>(delayTail) + reverbTail;
 }
 
 int RhythmicSpaceAudioProcessor::getNumPrograms()
@@ -124,7 +131,7 @@ int RhythmicSpaceAudioProcessor::getNumPrograms()
 
 int RhythmicSpaceAudioProcessor::getCurrentProgram()
 {
-    return 0;
+    return currentProgramIndex;
 }
 
 void RhythmicSpaceAudioProcessor::setCurrentProgram (int index)
@@ -141,6 +148,7 @@ const juce::String RhythmicSpaceAudioProcessor::getProgramName (int index)
 
 void RhythmicSpaceAudioProcessor::changeProgramName (int index, const juce::String& newName)
 {
+    juce::ignoreUnused(index, newName);
 }
 
 //==============================================================================
@@ -148,17 +156,12 @@ void RhythmicSpaceAudioProcessor::prepareToPlay (double sampleRate, int samplesP
 {
     currentSampleRate = sampleRate;
     
-    // Debug MIDI acceptance
-    DBG("Plugin acceptsMidi: " + juce::String(acceptsMidi() ? "YES" : "NO"));
-    DBG("Plugin isMidiEffect: " + juce::String(isMidiEffect() ? "YES" : "NO"));
-    
-    // Prepare all processors
     juce::dsp::ProcessSpec spec;
     spec.sampleRate = sampleRate;
     spec.maximumBlockSize = static_cast<uint32_t>(samplesPerBlock);
     spec.numChannels = 2;
     
-    stepSequencer.prepare(sampleRate, bpm);
+    stepSequencer.prepare(sampleRate, bpm.load());
     filterProcessor.prepare(spec);
     delayProcessor.prepare(spec);
     reverbProcessor.prepare(spec);
@@ -168,7 +171,11 @@ void RhythmicSpaceAudioProcessor::prepareToPlay (double sampleRate, int samplesP
 
 void RhythmicSpaceAudioProcessor::releaseResources()
 {
-    // Release resources when playback stops
+    filterProcessor.reset();
+    delayProcessor.reset();
+    reverbProcessor.reset();
+    panProcessor.reset();
+    volumeProcessor.reset();
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -178,7 +185,6 @@ bool RhythmicSpaceAudioProcessor::isBusesLayoutSupported (const BusesLayout& lay
     juce::ignoreUnused (layouts);
     return true;
   #else
-    // Stereo only
     if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
         return false;
 
@@ -192,80 +198,57 @@ bool RhythmicSpaceAudioProcessor::isBusesLayoutSupported (const BusesLayout& lay
 }
 #endif
 
-void RhythmicSpaceAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+void RhythmicSpaceAudioProcessor::updateHostTransportState()
 {
-    juce::ScopedNoDenormals noDenormals;
-    auto totalNumInputChannels  = getTotalNumInputChannels();
-    auto totalNumOutputChannels = getTotalNumOutputChannels();
+    if (! hostSyncEnabled.load())
+        return;
 
-    // Clear unused channels
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
-
-    // Process MIDI messages for controller mapping 🎛️
-    if (!midiMessages.isEmpty())
+    if (auto* playHead = getPlayHead())
     {
-        DBG("Processing " + juce::String(midiMessages.getNumEvents()) + " MIDI messages");
-        
-        // Set MIDI activity flag for UI indicator
-        midiActivityFlag.store(true);
-    }
-    
-    for (const auto metadata : midiMessages)
-    {
-        auto message = metadata.getMessage();
-        midiControllerMap.processMIDIMessage(message, [this](const juce::String& paramID, float value)
+        if (auto position = playHead->getPosition())
         {
-            // Update parameter from MIDI controller
-            if (auto* param = parameters.getParameter(paramID))
+            if (position->getBpm().hasValue())
             {
-                param->setValueNotifyingHost(value);
-            }
-        });
-    }
+                const double hostBpm = *position->getBpm();
 
-    // Measure input level
-    float inputPeak = buffer.getMagnitude(0, buffer.getNumSamples());
-    inputLevel.store(inputPeak);
-
-    // Sync to host tempo if enabled
-    if (hostSyncEnabled.load())
-    {
-        if (auto* playHead = getPlayHead())
-        {
-            if (auto position = playHead->getPosition())
-            {
-                if (position->getBpm().hasValue())
+                if (hostBpm != bpm.load())
                 {
-                    double hostBpm = *position->getBpm();
-                    if (hostBpm != bpm.load())
-                    {
-                        bpm.store(hostBpm);
-                        stepSequencer.setBPM(hostBpm);
-                    }
+                    bpm.store(hostBpm);
+                    stepSequencer.setBPM(hostBpm);
+                }
+            }
+
+            if (position->getIsPlaying().hasValue())
+            {
+                const bool hostPlaying = *position->getIsPlaying();
+
+                if (hostPlaying != playing.load())
+                {
+                    if (hostPlaying)
+                        stepSequencer.reset();
+
+                    playing.store(hostPlaying);
                 }
             }
         }
     }
+}
 
-    // Update step sequencer if playing
-    if (playing.load())
-    {
-        stepSequencer.process(buffer.getNumSamples());
-    }
+int RhythmicSpaceAudioProcessor::getFilterTypeIndex() const
+{
+    if (auto* typeParam = dynamic_cast<juce::AudioParameterChoice*>(parameters.getParameter("filterType")))
+        return typeParam->getIndex();
 
-    // Get current modulation values from step sequencer
-    auto modValues = stepSequencer.getCurrentModulationValues();
+    return 0;
+}
 
-    // Process audio through effect chain
-    juce::dsp::AudioBlock<float> block(buffer);
-    juce::dsp::ProcessContextReplacing<float> context(block);
-
-    // Apply effects with step sequencer modulation
-    filterProcessor.process(context, modValues.filter, 
+void RhythmicSpaceAudioProcessor::processEffectChain(juce::dsp::ProcessContextReplacing<float>& context,
+                                                     const ModulationValues& modValues)
+{
+    filterProcessor.process(context, modValues.filter,
         parameters.getRawParameterValue("filterCutoff")->load(),
         parameters.getRawParameterValue("filterResonance")->load(),
-        parameters.getRawParameterValue("filterType")->load(),
+        getFilterTypeIndex(),
         parameters.getRawParameterValue("filterMix")->load() / 100.0f);
 
     delayProcessor.process(context, modValues.delay,
@@ -284,13 +267,66 @@ void RhythmicSpaceAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer
 
     volumeProcessor.process(context, modValues.volume,
         parameters.getRawParameterValue("volumeAmount")->load() / 100.0f);
+}
 
-    // Apply master volume
-    float masterVol = parameters.getRawParameterValue("masterVolume")->load() / 100.0f;
-    buffer.applyGain(masterVol);
+void RhythmicSpaceAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+{
+    juce::ScopedNoDenormals noDenormals;
+    const auto totalNumInputChannels  = getTotalNumInputChannels();
+    const auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    // Measure output level
-    float outputPeak = buffer.getMagnitude(0, buffer.getNumSamples());
+    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
+        buffer.clear (i, 0, buffer.getNumSamples());
+
+    if (! midiMessages.isEmpty())
+        midiActivityFlag.store(true);
+    
+    for (const auto metadata : midiMessages)
+    {
+        auto message = metadata.getMessage();
+        midiControllerMap.processMIDIMessage(message, [this](const juce::String& paramID, float value)
+        {
+            if (auto* param = parameters.getParameter(paramID))
+                param->setValueNotifyingHost(value);
+        });
+    }
+
+    float inputPeak = 0.0f;
+    for (int ch = 0; ch < totalNumInputChannels; ++ch)
+        inputPeak = juce::jmax(inputPeak, buffer.getMagnitude(ch, 0, buffer.getNumSamples()));
+
+    inputLevel.store(inputPeak);
+
+    updateHostTransportState();
+
+    const float masterVol = parameters.getRawParameterValue("masterVolume")->load() / 100.0f;
+    int startSample = 0;
+    const int numSamples = buffer.getNumSamples();
+
+    while (startSample < numSamples)
+    {
+        int samplesToProcess = stepSequencer.getSamplesUntilNextStep();
+        samplesToProcess = juce::jmin(samplesToProcess, numSamples - startSample);
+
+        if (playing.load())
+            stepSequencer.advance(samplesToProcess);
+
+        const auto modValues = stepSequencer.getCurrentModulationValues();
+
+        juce::dsp::AudioBlock<float> fullBlock(buffer);
+        auto subBlock = fullBlock.getSubBlock((size_t) startSample, (size_t) samplesToProcess);
+        juce::dsp::ProcessContextReplacing<float> context(subBlock);
+
+        processEffectChain(context, modValues);
+        subBlock.multiplyBy(masterVol);
+
+        startSample += samplesToProcess;
+    }
+
+    float outputPeak = 0.0f;
+    for (int ch = 0; ch < totalNumOutputChannels; ++ch)
+        outputPeak = juce::jmax(outputPeak, buffer.getMagnitude(ch, 0, buffer.getNumSamples()));
+
     outputLevel.store(outputPeak);
 }
 
@@ -308,20 +344,23 @@ juce::AudioProcessorEditor* RhythmicSpaceAudioProcessor::createEditor()
 //==============================================================================
 void RhythmicSpaceAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    // Save state
     auto state = parameters.copyState();
     std::unique_ptr<juce::XmlElement> xml(state.createXml());
     
-    // Add step sequencer state
     auto* stepSeqXml = xml->createNewChildElement("StepSequencer");
     stepSequencer.saveState(*stepSeqXml);
+
+    xml->setAttribute("hostSyncEnabled", hostSyncEnabled.load());
+    xml->setAttribute("currentProgram", currentProgramIndex);
+
+    if (auto midiXml = midiControllerMap.toValueTree().createXml())
+        xml->addChildElement(midiXml.release());
     
     copyXmlToBinary(*xml, destData);
 }
 
 void RhythmicSpaceAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    // Load state
     std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
 
     if (xmlState.get() != nullptr)
@@ -330,17 +369,61 @@ void RhythmicSpaceAudioProcessor::setStateInformation (const void* data, int siz
         {
             parameters.replaceState(juce::ValueTree::fromXml(*xmlState));
             
-            // Load step sequencer state
             if (auto* stepSeqXml = xmlState->getChildByName("StepSequencer"))
                 stepSequencer.loadState(*stepSeqXml);
+
+            if (auto* midiXml = xmlState->getChildByName("MIDIControllerMap"))
+                midiControllerMap.fromValueTree(juce::ValueTree::fromXml(*midiXml));
+
+            hostSyncEnabled.store(xmlState->getBoolAttribute("hostSyncEnabled", false));
+            currentProgramIndex = xmlState->getIntAttribute("currentProgram", currentProgramIndex);
+
+            syncRuntimeStateFromParameters();
         }
     }
+}
+
+void RhythmicSpaceAudioProcessor::syncRuntimeStateFromParameters()
+{
+    if (auto* playingParam = parameters.getRawParameterValue("playing"))
+        playing.store(playingParam->load() >= 0.5f);
+
+    if (auto* bpmParam = parameters.getRawParameterValue("bpm"))
+    {
+        const double newBpm = bpmParam->load();
+        bpm.store(newBpm);
+        stepSequencer.setBPM(newBpm);
+    }
+}
+
+void RhythmicSpaceAudioProcessor::applyPresetParameters(const Preset& preset)
+{
+    setParameterValue(parameters, "filterCutoff", preset.filterCutoff);
+    setParameterValue(parameters, "filterResonance", preset.filterResonance);
+    setParameterValue(parameters, "filterMix", preset.filterMix);
+    setParameterValue(parameters, "delayTime", preset.delayTime);
+    setParameterValue(parameters, "delayFeedback", preset.delayFeedback);
+    setParameterValue(parameters, "delayMix", preset.delayMix);
+    setParameterValue(parameters, "reverbSize", preset.reverbSize);
+    setParameterValue(parameters, "reverbDamping", preset.reverbDamping);
+    setParameterValue(parameters, "reverbMix", preset.reverbMix);
+    setParameterValue(parameters, "panWidth", preset.panWidth);
+    setParameterValue(parameters, "panRate", preset.panRate);
+    setParameterValue(parameters, "volumeAmount", preset.volumeAmount);
+    setParameterValue(parameters, "masterVolume", preset.masterVolume);
+
+    if (auto* typeParam = dynamic_cast<juce::AudioParameterChoice*>(parameters.getParameter("filterType")))
+        typeParam->setValueNotifyingHost(typeParam->convertTo0to1((float) juce::jlimit(0, 2, preset.filterType)));
 }
 
 //==============================================================================
 void RhythmicSpaceAudioProcessor::setPlaying(bool shouldPlay)
 {
     playing.store(shouldPlay);
+
+    if (auto* param = parameters.getParameter("playing"))
+        param->setValueNotifyingHost(shouldPlay ? 1.0f : 0.0f);
+
     if (shouldPlay)
         stepSequencer.reset();
 }
@@ -349,7 +432,7 @@ void RhythmicSpaceAudioProcessor::setBPM(double newBPM)
 {
     bpm.store(newBPM);
     stepSequencer.setBPM(newBPM);
-    parameters.getParameter("bpm")->setValueNotifyingHost((newBPM - 60.0f) / 180.0f);
+    setParameterValue(parameters, "bpm", static_cast<float>(newBPM));
 }
 
 void RhythmicSpaceAudioProcessor::setHostSyncEnabled(bool enabled)
@@ -361,16 +444,14 @@ void RhythmicSpaceAudioProcessor::loadPreset(int presetIndex)
 {
     if (auto* preset = presetManager.getPreset(presetIndex))
     {
-        // Load preset into step sequencer
         stepSequencer.loadPreset(*preset);
-        
-        // Update parameters
+        applyPresetParameters(*preset);
         setBPM(preset->bpm);
+        currentProgramIndex = presetIndex;
     }
 }
 
 //==============================================================================
-// This creates new instances of the plugin
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new RhythmicSpaceAudioProcessor();

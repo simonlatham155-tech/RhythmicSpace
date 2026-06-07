@@ -8,7 +8,7 @@
               pluginName="RhythmicSpace" pluginDesc="Step Sequencer Multi-Effect Processor"
               pluginManufacturer="LATHAMAUDIO" aaxIdentifier="com.lathamaudio.rhythmicspace"
               pluginAAXCategory="8" pluginVST3Category="Fx,Modulation" bundleIdentifier="com.lathamaudio.rhythmicspace"
-              displaySplashScreen="1" reportAppUsage="0" splashScreenColour="Dark">
+              displaySplashScreen="0" reportAppUsage="0" splashScreenColour="Dark">
   <MAINGROUP id="DkVHPl" name="RhythmicSpace">
     <GROUP id="{SOURCE_GROUP}" name="Source">
       <GROUP id="{DATA_GROUP}" name="Data">

@@ -43,7 +43,14 @@ TransportComponent::TransportComponent(RhythmicSpaceAudioProcessor& proc)
     bpmLabel.setColour(juce::Label::textColourId, MetallicLookAndFeel::TEXT_SECONDARY);
     addAndMakeVisible(bpmLabel);
     
-    // Initial state
+    syncFromProcessor();
+}
+
+void TransportComponent::syncFromProcessor()
+{
+    bpmSlider.setValue(processor.getBPM(), juce::dontSendNotification);
+    playButton.setToggleState(processor.isPlaying(), juce::dontSendNotification);
+    syncButton.setToggleState(processor.isHostSyncEnabled(), juce::dontSendNotification);
     updateBpmControlState();
 }
 

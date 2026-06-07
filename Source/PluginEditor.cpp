@@ -109,6 +109,8 @@ RhythmicSpaceAudioProcessorEditor::RhythmicSpaceAudioProcessorEditor (RhythmicSp
     // Set window size - matching web app dimensions
     setSize (1200, 800);
     
+    transport->syncFromProcessor();
+
     // Start timer for UI updates
     startTimerHz(30);
 }
@@ -193,7 +195,6 @@ void RhythmicSpaceAudioProcessorEditor::paint (juce::Graphics& g)
     auto badgeBounds = titleArea.removeFromRight(260).reduced(2, 8); // Increased from 220 to 260
     
     // Debug log to check bounds
-    DBG("Badge bounds: " << badgeBounds.toString());
     
     MetallicLookAndFeel::drawEmbossedBadge(g, badgeBounds, "LATHAM", "AUDIO");
     
