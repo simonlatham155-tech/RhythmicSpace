@@ -3,7 +3,6 @@
 //==============================================================================
 StepSequencer::StepSequencer()
 {
-    // Initialize all steps to 0.5 (center)
     for (auto& paramSteps : steps)
         paramSteps.fill(0.5f);
 }
@@ -23,19 +22,25 @@ void StepSequencer::prepare(double newSampleRate, double newBPM)
 
 void StepSequencer::updateStepTiming()
 {
-    // Calculate samples per 16th note
-    double beatsPerSecond = bpm / 60.0;
-    double sixteenthNotesPerSecond = beatsPerSecond * 4.0; // 4 sixteenth notes per beat
-    double samplesPerSixteenthNote = sampleRate / sixteenthNotesPerSecond;
-    
-    samplesPerStep = static_cast<int>(samplesPerSixteenthNote);
+    bpm = juce::jlimit(1.0, 999.0, bpm);
+    sampleRate = juce::jmax(1.0, sampleRate);
+
+    const double beatsPerSecond = bpm / 60.0;
+    const double sixteenthNotesPerSecond = beatsPerSecond * 4.0;
+    const double samplesPerSixteenthNote = sampleRate / sixteenthNotesPerSecond;
+
+    samplesPerStep = juce::jmax(1, (int) std::round(samplesPerSixteenthNote));
 }
 
-void StepSequencer::process(int numSamples)
+int StepSequencer::getSamplesUntilNextStep() const
+{
+    return juce::jmax(1, samplesPerStep - sampleCounter);
+}
+
+void StepSequencer::advance(int numSamples)
 {
     sampleCounter += numSamples;
-    
-    // Advance to next step if needed
+
     while (sampleCounter >= samplesPerStep)
     {
         sampleCounter -= samplesPerStep;
@@ -49,6 +54,22 @@ void StepSequencer::reset()
     sampleCounter = 0;
 }
 
+void StepSequencer::syncToHostPpq(double ppqPosition)
+{
+    const double sixteenthPosition = ppqPosition * 4.0;
+    const auto wholeSteps = static_cast<int64_t>(std::floor(sixteenthPosition));
+
+    int step = static_cast<int>(wholeSteps % NUM_STEPS);
+    if (step < 0)
+        step += NUM_STEPS;
+
+    currentStep = step;
+
+    const double fraction = sixteenthPosition - std::floor(sixteenthPosition);
+    sampleCounter = juce::jlimit(0, juce::jmax(0, samplesPerStep - 1),
+                                   static_cast<int>(std::round(fraction * samplesPerStep)));
+}
+
 //==============================================================================
 void StepSequencer::setBPM(double newBPM)
 {
@@ -60,6 +81,7 @@ void StepSequencer::setStepValue(int parameter, int step, float value)
 {
     if (parameter >= 0 && parameter < NumParameters && step >= 0 && step < NUM_STEPS)
     {
+        const juce::SpinLock::ScopedLockType lock(stepLock);
         steps[parameter][step] = juce::jlimit(0.0f, 1.0f, value);
     }
 }
@@ -67,23 +89,36 @@ void StepSequencer::setStepValue(int parameter, int step, float value)
 float StepSequencer::getStepValue(int parameter, int step) const
 {
     if (parameter >= 0 && parameter < NumParameters && step >= 0 && step < NUM_STEPS)
+    {
+        const juce::SpinLock::ScopedLockType lock(stepLock);
         return steps[parameter][step];
+    }
+
     return 0.5f;
 }
 
 std::array<float, 16> StepSequencer::getSteps(int parameter) const
 {
     if (parameter >= 0 && parameter < NumParameters)
+    {
+        const juce::SpinLock::ScopedLockType lock(stepLock);
         return steps[parameter];
-    
-    // Return default array with all 0.5f
+    }
+
     std::array<float, 16> defaultSteps;
     defaultSteps.fill(0.5f);
     return defaultSteps;
 }
 
+int StepSequencer::getCurrentStep() const
+{
+    return currentStep;
+}
+
 ModulationValues StepSequencer::getCurrentModulationValues() const
 {
+    const juce::SpinLock::ScopedLockType lock(stepLock);
+
     ModulationValues values;
     values.filter = steps[FilterParam][currentStep];
     values.pan = steps[PanParam][currentStep];
@@ -98,7 +133,9 @@ void StepSequencer::randomizeParameter(int parameter)
 {
     if (parameter >= 0 && parameter < NumParameters)
     {
+        const juce::SpinLock::ScopedLockType lock(stepLock);
         juce::Random random;
+
         for (auto& step : steps[parameter])
             step = random.nextFloat();
     }
@@ -113,11 +150,16 @@ void StepSequencer::randomizeAll()
 void StepSequencer::clearParameter(int parameter)
 {
     if (parameter >= 0 && parameter < NumParameters)
+    {
+        const juce::SpinLock::ScopedLockType lock(stepLock);
         steps[parameter].fill(0.5f);
+    }
 }
 
 void StepSequencer::clearAll()
 {
+    const juce::SpinLock::ScopedLockType lock(stepLock);
+
     for (auto& paramSteps : steps)
         paramSteps.fill(0.5f);
 }
@@ -125,64 +167,77 @@ void StepSequencer::clearAll()
 //==============================================================================
 void StepSequencer::loadPreset(const Preset& preset)
 {
-    steps[FilterParam] = preset.filterSteps;
-    steps[PanParam] = preset.panSteps;
-    steps[DelayParam] = preset.delaySteps;
-    steps[ReverbParam] = preset.reverbSteps;
-    steps[VolumeParam] = preset.volumeSteps;
-    
+    {
+        const juce::SpinLock::ScopedLockType lock(stepLock);
+        steps[FilterParam] = preset.filterSteps;
+        steps[PanParam] = preset.panSteps;
+        steps[DelayParam] = preset.delaySteps;
+        steps[ReverbParam] = preset.reverbSteps;
+        steps[VolumeParam] = preset.volumeSteps;
+    }
+
     setBPM(preset.bpm);
 }
 
 void StepSequencer::savePreset(Preset& preset) const
 {
-    preset.filterSteps = steps[FilterParam];
-    preset.panSteps = steps[PanParam];
-    preset.delaySteps = steps[DelayParam];
-    preset.reverbSteps = steps[ReverbParam];
-    preset.volumeSteps = steps[VolumeParam];
+    {
+        const juce::SpinLock::ScopedLockType lock(stepLock);
+        preset.filterSteps = steps[FilterParam];
+        preset.panSteps = steps[PanParam];
+        preset.delaySteps = steps[DelayParam];
+        preset.reverbSteps = steps[ReverbParam];
+        preset.volumeSteps = steps[VolumeParam];
+    }
+
     preset.bpm = bpm;
 }
 
 //==============================================================================
 void StepSequencer::saveState(juce::XmlElement& xml) const
 {
+    const juce::SpinLock::ScopedLockType lock(stepLock);
+
     xml.setAttribute("bpm", bpm);
     xml.setAttribute("currentStep", currentStep);
-    
-    // Save each parameter's steps
-    const char* paramNames[] = {"filter", "pan", "delay", "reverb", "volume"};
-    
+
+    const char* paramNames[] = { "filter", "pan", "delay", "reverb", "volume" };
+
     for (int param = 0; param < NumParameters; ++param)
     {
         juce::String stepData;
+
         for (int step = 0; step < NUM_STEPS; ++step)
         {
-            if (step > 0) stepData += ",";
+            if (step > 0)
+                stepData += ",";
+
             stepData += juce::String(steps[param][step], 4);
         }
+
         xml.setAttribute(paramNames[param], stepData);
     }
 }
 
 void StepSequencer::loadState(const juce::XmlElement& xml)
 {
-    bpm = xml.getDoubleAttribute("bpm", 120.0);
-    currentStep = xml.getIntAttribute("currentStep", 0);
+    bpm = juce::jlimit(60.0, 240.0, xml.getDoubleAttribute("bpm", 120.0));
+    currentStep = juce::jlimit(0, NUM_STEPS - 1, xml.getIntAttribute("currentStep", 0));
     updateStepTiming();
-    
-    // Load each parameter's steps
-    const char* paramNames[] = {"filter", "pan", "delay", "reverb", "volume"};
-    
-    for (int param = 0; param < NumParameters; ++param)
+
+    const char* paramNames[] = { "filter", "pan", "delay", "reverb", "volume" };
+
     {
-        juce::String stepData = xml.getStringAttribute(paramNames[param]);
-        juce::StringArray tokens;
-        tokens.addTokens(stepData, ",", "");
-        
-        for (int step = 0; step < NUM_STEPS && step < tokens.size(); ++step)
+        const juce::SpinLock::ScopedLockType lock(stepLock);
+
+        for (int param = 0; param < NumParameters; ++param)
         {
-            steps[param][step] = tokens[step].getFloatValue();
+            juce::String stepData = xml.getStringAttribute(paramNames[param]);
+            juce::StringArray tokens;
+            tokens.addTokens(stepData, ",", "");
+
+            for (int step = 0; step < NUM_STEPS && step < tokens.size(); ++step)
+                steps[param][step] = juce::jlimit(0.0f, 1.0f, tokens[step].getFloatValue());
         }
     }
 }

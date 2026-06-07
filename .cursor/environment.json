@@ -1,0 +1,3 @@
+{
+  "install": "echo 'RhythmicSpace: JUCE plugin — build and test on macOS with Xcode 14+ and JUCE 8.0.10'"
+}

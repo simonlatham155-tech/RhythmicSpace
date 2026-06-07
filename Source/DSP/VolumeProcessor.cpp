@@ -24,8 +24,8 @@ void VolumeProcessor::process(juce::dsp::ProcessContextReplacing<float>& context
     // Amount controls how much the sequencer affects volume
     float volumeGain = modulation * amount + (1.0f - amount);
     volumeGain = juce::jlimit(0.0f, 2.0f, volumeGain);
-    
-    // Convert to decibels for natural volume control
+    volumeGain = juce::jmax(0.0001f, volumeGain);
+
     float gainDB = juce::Decibels::gainToDecibels(volumeGain);
     gain.setGainDecibels(gainDB);
     

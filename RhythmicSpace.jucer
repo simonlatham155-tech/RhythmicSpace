@@ -8,7 +8,7 @@
               pluginName="RhythmicSpace" pluginDesc="Step Sequencer Multi-Effect Processor"
               pluginManufacturer="LATHAMAUDIO" aaxIdentifier="com.lathamaudio.rhythmicspace"
               pluginAAXCategory="8" pluginVST3Category="Fx,Modulation" bundleIdentifier="com.lathamaudio.rhythmicspace"
-              displaySplashScreen="1" reportAppUsage="0" splashScreenColour="Dark">
+              displaySplashScreen="0" reportAppUsage="0" splashScreenColour="Dark">
   <MAINGROUP id="DkVHPl" name="RhythmicSpace">
     <GROUP id="{SOURCE_GROUP}" name="Source">
       <GROUP id="{DATA_GROUP}" name="Data">
@@ -64,6 +64,8 @@
               file="Source/DSP/StepSequencer.h"/>
         <FILE id="StepSeqC" name="StepSequencer.cpp" compile="1" resource="0"
               file="Source/DSP/StepSequencer.cpp"/>
+        <FILE id="ModSmoothH" name="ModulationSmoother.h" compile="0" resource="0"
+              file="Source/DSP/ModulationSmoother.h"/>
         <FILE id="FilterProcH" name="FilterProcessor.h" compile="0" resource="0"
               file="Source/DSP/FilterProcessor.h"/>
         <FILE id="FilterProcC" name="FilterProcessor.cpp" compile="1" resource="0"

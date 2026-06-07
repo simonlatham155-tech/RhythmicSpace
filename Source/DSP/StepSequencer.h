@@ -30,12 +30,16 @@ struct Preset
     float filterResonance = 0.7f;
     int filterType = 0;
     float filterMix = 100.0f;
-    float delayTime = 0.5f;
-    float delayFeedback = 0.5f;
-    float delayMix = 50.0f;
-    float reverbSize = 0.5f;
-    float reverbDamping = 0.5f;
-    float reverbMix = 30.0f;
+    float delayTime = 500.0f;
+    float delayFeedback = 40.0f;
+    float delayMix = 30.0f;
+    float reverbSize = 50.0f;
+    float reverbDamping = 50.0f;
+    float reverbMix = 25.0f;
+    float panWidth = 50.0f;
+    float panRate = 50.0f;
+    float volumeAmount = 50.0f;
+    float masterVolume = 80.0f;
     
     // Step data for each parameter (16 steps, 0.0-1.0)
     std::array<float, 16> filterSteps;
@@ -59,8 +63,10 @@ public:
     void prepare(double sampleRate, double bpm);
     
     // Processing
-    void process(int numSamples);
+    void advance(int numSamples);
+    int getSamplesUntilNextStep() const;
     void reset();
+    void syncToHostPpq(double ppqPosition);
     
     // Transport
     void setBPM(double newBPM);
@@ -70,7 +76,7 @@ public:
     void setStepValue(int parameter, int step, float value);
     float getStepValue(int parameter, int step) const;
     std::array<float, 16> getSteps(int parameter) const;
-    int getCurrentStep() const { return currentStep; }
+    int getCurrentStep() const;
     
     // Modulation output
     ModulationValues getCurrentModulationValues() const;
@@ -105,15 +111,15 @@ private:
     
     // Step data
     std::array<std::array<float, NUM_STEPS>, NumParameters> steps;
+    mutable juce::SpinLock stepLock;
     
     // Timing
     double sampleRate = 44100.0;
     double bpm = 120.0;
-    int samplesPerStep = 0;
+    int samplesPerStep = 1;
     int sampleCounter = 0;
     int currentStep = 0;
     
-    // Calculate samples per step based on BPM
     void updateStepTiming();
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(StepSequencer)

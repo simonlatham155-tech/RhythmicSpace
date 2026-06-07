@@ -2,6 +2,7 @@
 
 #include <JuceHeader.h>
 #include "DSP/StepSequencer.h"
+#include "DSP/ModulationSmoother.h"
 #include "DSP/FilterProcessor.h"
 #include "DSP/DelayProcessor.h"
 #include "DSP/ReverbProcessor.h"
@@ -56,16 +57,13 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     //==============================================================================
-    // Parameter access
     juce::AudioProcessorValueTreeState& getValueTreeState() { return parameters; }
     juce::AudioProcessorValueTreeState& getParameters() { return parameters; }
     const juce::AudioProcessorValueTreeState& getParameters() const { return parameters; }
     
-    // Step sequencer access
     StepSequencer& getStepSequencer() { return stepSequencer; }
     const StepSequencer& getStepSequencer() const { return stepSequencer; }
     
-    // Transport control
     void setPlaying(bool shouldPlay);
     bool isPlaying() const { return playing; }
     void setBPM(double newBPM);
@@ -73,60 +71,50 @@ public:
     void setHostSyncEnabled(bool enabled);
     bool isHostSyncEnabled() const { return hostSyncEnabled; }
     
-    // Current step for UI visualization
     int getCurrentStep() const { return stepSequencer.getCurrentStep(); }
     
-    // Level metering
     float getInputLevel() const { return inputLevel.load(); }
     float getOutputLevel() const { return outputLevel.load(); }
     
-    // MIDI activity for UI indicator
     bool hasMIDIActivity() const { return midiActivityFlag.load(); }
     void clearMIDIActivity() { midiActivityFlag.store(false); }
     
-    // Preset management
     PresetManager& getPresetManager() { return presetManager; }
     void loadPreset(int presetIndex);
     
-    // MIDI controller mapping
-    MIDIControllerMap& getMIDIControllerMap() { return midiControllerMap; }  // MIDI enabled! 🎛️
+    MIDIControllerMap& getMIDIControllerMap() { return midiControllerMap; }
 
 private:
-    //==============================================================================
-    // Audio Processing Components
     StepSequencer stepSequencer;
+    ModulationSmoother modulationSmoother;
     FilterProcessor filterProcessor;
     DelayProcessor delayProcessor;
     ReverbProcessor reverbProcessor;
     PanProcessor panProcessor;
     VolumeProcessor volumeProcessor;
     
-    // Preset system
     PresetManager presetManager;
-    
-    // MIDI controller mapping
-    MIDIControllerMap midiControllerMap;  // MIDI enabled! 🎛️
-    
-    // Parameters
+    MIDIControllerMap midiControllerMap;
     juce::AudioProcessorValueTreeState parameters;
     
-    // Transport state
     std::atomic<bool> playing { false };
     std::atomic<double> bpm { 120.0 };
     std::atomic<bool> hostSyncEnabled { false };
     
-    // Level meters
     std::atomic<float> inputLevel { 0.0f };
     std::atomic<float> outputLevel { 0.0f };
-    
-    // MIDI activity flag
     std::atomic<bool> midiActivityFlag { false };
     
-    // Sample rate
+    int currentProgramIndex = 0;
     double currentSampleRate = 44100.0;
+    double lastHostPpq = -1.0;
     
-    // Create parameter layout
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+    void syncRuntimeStateFromParameters();
+    void applyPresetParameters(const Preset& preset);
+    int getFilterTypeIndex() const;
+    void processEffectChain(juce::dsp::ProcessContextReplacing<float>& context, const ModulationValues& modValues);
+    void updateHostTransportState();
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RhythmicSpaceAudioProcessor)
 };

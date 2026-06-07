@@ -17,6 +17,7 @@ public:
     
     void paint(juce::Graphics& g) override;
     void resized() override;
+    void syncFromProcessor();
 
 private:
     void buttonClicked(juce::Button* button) override;

@@ -4,6 +4,7 @@
 PresetManager::PresetManager()
 {
     createFactoryPresets();
+    factoryPresetCount = static_cast<int>(presets.size());
     loadUserPresets();
 }
 
@@ -32,10 +33,21 @@ juce::File PresetManager::getUserPresetsDirectory() const
 
 void PresetManager::saveUserPreset(const Preset& preset)
 {
-    // Add to memory
-    presets.push_back(preset);
+    bool updatedExisting = false;
+
+    for (int i = factoryPresetCount; i < static_cast<int>(presets.size()); ++i)
+    {
+        if (presets[static_cast<size_t>(i)].name == preset.name)
+        {
+            presets[static_cast<size_t>(i)] = preset;
+            updatedExisting = true;
+            break;
+        }
+    }
+
+    if (! updatedExisting)
+        presets.push_back(preset);
     
-    // Save to file
     auto presetFile = getUserPresetsDirectory().getChildFile(preset.name + ".rsp");
     
     // Create XML
@@ -56,6 +68,10 @@ void PresetManager::saveUserPreset(const Preset& preset)
     effectParams->setAttribute("reverbSize", preset.reverbSize);
     effectParams->setAttribute("reverbDamping", preset.reverbDamping);
     effectParams->setAttribute("reverbMix", preset.reverbMix);
+    effectParams->setAttribute("panWidth", preset.panWidth);
+    effectParams->setAttribute("panRate", preset.panRate);
+    effectParams->setAttribute("volumeAmount", preset.volumeAmount);
+    effectParams->setAttribute("masterVolume", preset.masterVolume);
     
     // Save step sequences
     auto saveSteps = [&](const juce::String& name, const std::array<float, 16>& steps)
@@ -124,6 +140,10 @@ void PresetManager::loadUserPresets()
                 preset.reverbSize = effectParams->getDoubleAttribute("reverbSize", 0.5);
                 preset.reverbDamping = effectParams->getDoubleAttribute("reverbDamping", 0.5);
                 preset.reverbMix = effectParams->getDoubleAttribute("reverbMix", 30.0);
+                preset.panWidth = effectParams->getDoubleAttribute("panWidth", 50.0);
+                preset.panRate = effectParams->getDoubleAttribute("panRate", 50.0);
+                preset.volumeAmount = effectParams->getDoubleAttribute("volumeAmount", 50.0);
+                preset.masterVolume = effectParams->getDoubleAttribute("masterVolume", 80.0);
             }
             
             // Load step sequences
@@ -162,16 +182,20 @@ Preset PresetManager::createPresetFromCurrentState(const juce::String& name,
     // Get effect parameters
     preset.filterCutoff = parameters.getRawParameterValue("filterCutoff")->load();
     preset.filterResonance = parameters.getRawParameterValue("filterResonance")->load();
-    preset.filterType = parameters.getRawParameterValue("filterType")->load();
     preset.filterMix = parameters.getRawParameterValue("filterMix")->load();
-    
     preset.delayTime = parameters.getRawParameterValue("delayTime")->load();
     preset.delayFeedback = parameters.getRawParameterValue("delayFeedback")->load();
     preset.delayMix = parameters.getRawParameterValue("delayMix")->load();
-    
     preset.reverbSize = parameters.getRawParameterValue("reverbSize")->load();
     preset.reverbDamping = parameters.getRawParameterValue("reverbDamping")->load();
     preset.reverbMix = parameters.getRawParameterValue("reverbMix")->load();
+    preset.panWidth = parameters.getRawParameterValue("panWidth")->load();
+    preset.panRate = parameters.getRawParameterValue("panRate")->load();
+    preset.volumeAmount = parameters.getRawParameterValue("volumeAmount")->load();
+    preset.masterVolume = parameters.getRawParameterValue("masterVolume")->load();
+
+    if (auto* typeParam = dynamic_cast<juce::AudioParameterChoice*>(parameters.getParameter("filterType")))
+        preset.filterType = typeParam->getIndex();
     
     // Get step sequences
     preset.filterSteps = sequencer.getSteps(StepSequencer::FilterParam);

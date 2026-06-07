@@ -39,6 +39,7 @@ public:
     std::vector<KnobComponent*>& getKnobs() { return knobs; }
     
     std::function<void()> layoutFunction;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> filterTypeAttachment;
     
 private:
     juce::OwnedArray<juce::Component> childComponents;
@@ -121,8 +122,9 @@ std::unique_ptr<juce::Component> EffectPanelComponent::createFilterPanel()
     typeCombo->addItem("Low Pass", 1);
     typeCombo->addItem("High Pass", 2);
     typeCombo->addItem("Band Pass", 3);
-    typeCombo->setSelectedId(1);
     auto* typeComboPtr = panel->addOwnedComponent(std::move(typeCombo));
+    panel->filterTypeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
+        valueTreeState, "filterType", *typeComboPtr);
     
     panel->setSize(400, 120);
     

@@ -15,7 +15,7 @@ public:
     void prepare(const juce::dsp::ProcessSpec& spec);
     void process(juce::dsp::ProcessContextReplacing<float>& context,
                  float modulation, float cutoff, float resonance, 
-                 float type, float mix);
+                 int filterTypeIndex, float mix);
     
     void reset();
 
@@ -27,10 +27,12 @@ private:
         BandPass
     };
     
-    juce::dsp::StateVariableTPTFilter<float> filter;
+    std::array<juce::dsp::StateVariableTPTFilter<float>, 2> filters;
     juce::AudioBuffer<float> dryBuffer;
     
     double sampleRate = 44100.0;
+    
+    static juce::dsp::StateVariableTPTFilterType getFilterType(int filterTypeIndex);
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FilterProcessor)
 };
