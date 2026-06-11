@@ -6,11 +6,15 @@ JUCE 8 audio plugin (AU, VST3, Standalone). Step-sequencer multi-effect processo
 
 ## Build
 
-Requires **macOS + Xcode**. Cannot compile on Linux cloud VMs.
+**macOS + Xcode** is the canonical path for AU/VST3 release builds and DAW testing.
+
+Linux Standalone builds are supported via Projucer → Linux Makefile (see branch `cursor/dev-env-setup-5268` or cloud setup docs).
 
 ```bash
-# On macOS after opening RhythmicSpace.jucer in Projucer:
-# Save and Open in IDE → Release build (AU + VST3 targets)
+# macOS: open RhythmicSpace.jucer in Projucer → Save and Open in IDE → Release build
+
+# Linux Standalone (after Projucer --resave):
+cd Builds/LinuxMakefile && make CONFIG=Debug -j"$(nproc)"
 ```
 
 ## Git

@@ -219,8 +219,7 @@ void RhythmicSpaceAudioProcessor::updateHostTransportState()
                 }
             }
 
-            if (position->getIsPlaying().hasValue())
-                playing.store(*position->getIsPlaying());
+            playing.store (position->getIsPlaying());
 
             if (position->getPpqPosition().hasValue())
             {
