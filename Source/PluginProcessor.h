@@ -108,6 +108,7 @@ private:
     int currentProgramIndex = 0;
     double currentSampleRate = 44100.0;
     double lastHostPpq = -1.0;
+    bool hostPpqSyncedThisBlock = false;
     
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     void syncRuntimeStateFromParameters();

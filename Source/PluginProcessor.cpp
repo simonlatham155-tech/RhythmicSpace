@@ -201,38 +201,51 @@ bool RhythmicSpaceAudioProcessor::isBusesLayoutSupported (const BusesLayout& lay
 
 void RhythmicSpaceAudioProcessor::updateHostTransportState()
 {
-    if (! hostSyncEnabled.load())
-        return;
+    hostPpqSyncedThisBlock = false;
 
     if (auto* playHead = getPlayHead())
     {
         if (auto position = playHead->getPosition())
         {
-            if (position->getBpm().hasValue())
-            {
-                const double hostBpm = *position->getBpm();
+            const bool hostPlaying = position->getIsPlaying();
 
-                if (hostBpm != bpm.load())
+            if (hostSyncEnabled.load())
+            {
+                if (position->getBpm().hasValue())
                 {
-                    bpm.store(hostBpm);
-                    stepSequencer.setBPM(hostBpm);
+                    const double hostBpm = *position->getBpm();
+
+                    if (hostBpm != bpm.load())
+                    {
+                        bpm.store(hostBpm);
+                        stepSequencer.setBPM(hostBpm);
+                    }
+                }
+
+                playing.store(hostPlaying);
+
+                if (position->getPpqPosition().hasValue())
+                {
+                    const double hostPpq = *position->getPpqPosition();
+                    const bool hostJumped = lastHostPpq < 0.0
+                                         || std::abs(hostPpq - lastHostPpq) > 0.25;
+
+                    if (hostPlaying || hostJumped)
+                    {
+                        stepSequencer.syncToHostPpq(hostPpq);
+                        hostPpqSyncedThisBlock = true;
+                    }
+
+                    lastHostPpq = hostPpq;
                 }
             }
-
-            playing.store (position->getIsPlaying());
-
-            if (position->getPpqPosition().hasValue())
+           #if ! JucePlugin_Build_Standalone
+            else
             {
-                const double hostPpq = *position->getPpqPosition();
-                const bool hostPlaying = playing.load();
-                const bool hostJumped = lastHostPpq < 0.0
-                                     || std::abs(hostPpq - lastHostPpq) > 0.25;
-
-                if (hostPlaying || hostJumped)
-                    stepSequencer.syncToHostPpq(hostPpq);
-
-                lastHostPpq = hostPpq;
+                // In a DAW (e.g. Ableton): follow host play/stop even when SYNC is off.
+                playing.store(hostPlaying);
             }
+           #endif
         }
     }
 }
@@ -303,6 +316,8 @@ void RhythmicSpaceAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer
     updateHostTransportState();
 
     const float masterVol = parameters.getRawParameterValue("masterVolume")->load() / 100.0f;
+    const bool hostSync = hostSyncEnabled.load();
+    const bool isRunning = playing.load();
     int startSample = 0;
     const int numSamples = buffer.getNumSamples();
 
@@ -311,8 +326,19 @@ void RhythmicSpaceAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer
         int samplesToProcess = stepSequencer.getSamplesUntilNextStep();
         samplesToProcess = juce::jmin(samplesToProcess, numSamples - startSample);
 
-        if (! hostSyncEnabled.load() && playing.load())
-            stepSequencer.advance(samplesToProcess);
+        if (isRunning)
+        {
+            if (hostSync)
+            {
+                // Prefer PPQ lock when available; fall back to sample clock if host omits PPQ.
+                if (! hostPpqSyncedThisBlock)
+                    stepSequencer.advance(samplesToProcess);
+            }
+            else
+            {
+                stepSequencer.advance(samplesToProcess);
+            }
+        }
 
         const auto modValues = stepSequencer.getCurrentModulationValues();
         modulationSmoother.setTargets(modValues);

@@ -34,6 +34,7 @@ cd Builds/LinuxMakefile && make CONFIG=Debug -j"$(nproc)"
 ## Testing checklist (macOS DAW)
 
 1. Save/reload project — steps, knobs, MIDI mappings persist
-2. Host SYNC on — sequencer follows DAW playhead
-3. Filter type + preset switching works
-4. AU and VST3 load without crash
+2. **Ableton / DAW transport** — press host Play; sequencer must advance without clicking plugin PLAY (SYNC off is OK)
+3. Host SYNC on — sequencer follows DAW tempo and playhead PPQ
+4. Filter type + preset switching works
+5. AU and VST3 load without crash
