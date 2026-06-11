@@ -324,8 +324,13 @@ void RhythmicSpaceAudioProcessorEditor::timerCallback()
     reverbStepSequencer->setCurrentStep(currentStep);
     volumeStepSequencer->setCurrentStep(currentStep);
     
+    // Reflect host transport in plugin UI when running inside a DAW.
+   #if ! JucePlugin_Build_Standalone
+    transport->syncFromProcessor();
+   #else
     if (audioProcessor.isHostSyncEnabled())
         transport->syncFromProcessor();
+   #endif
 
     inputMeter->setLevel(audioProcessor.getInputLevel());
     outputMeter->setLevel(audioProcessor.getOutputLevel());
