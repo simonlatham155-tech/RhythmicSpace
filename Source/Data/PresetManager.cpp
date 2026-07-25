@@ -31,24 +31,13 @@ juce::File PresetManager::getUserPresetsDirectory() const
     return presetDir;
 }
 
-void PresetManager::saveUserPreset(const Preset& preset)
+bool PresetManager::saveUserPreset(const Preset& preset)
 {
-    bool updatedExisting = false;
+    const auto legalName = juce::File::createLegalFileName(preset.name).trim();
+    if (legalName.isEmpty())
+        return false;
 
-    for (int i = factoryPresetCount; i < static_cast<int>(presets.size()); ++i)
-    {
-        if (presets[static_cast<size_t>(i)].name == preset.name)
-        {
-            presets[static_cast<size_t>(i)] = preset;
-            updatedExisting = true;
-            break;
-        }
-    }
-
-    if (! updatedExisting)
-        presets.push_back(preset);
-    
-    auto presetFile = getUserPresetsDirectory().getChildFile(preset.name + ".rsp");
+    auto presetFile = getUserPresetsDirectory().getChildFile(legalName + ".rsp");
     
     // Create XML
     juce::XmlElement xml("RhythmicSpacePreset");
@@ -92,8 +81,20 @@ void PresetManager::saveUserPreset(const Preset& preset)
     saveSteps("ReverbSteps", preset.reverbSteps);
     saveSteps("VolumeSteps", preset.volumeSteps);
     
-    // Write to file
-    xml.writeTo(presetFile);
+    if (! xml.writeTo(presetFile))
+        return false;
+
+    for (int i = factoryPresetCount; i < static_cast<int>(presets.size()); ++i)
+    {
+        if (presets[static_cast<size_t>(i)].name == preset.name)
+        {
+            presets[static_cast<size_t>(i)] = preset;
+            return true;
+        }
+    }
+
+    presets.push_back(preset);
+    return true;
 }
 
 void PresetManager::deleteUserPreset(int index)
@@ -103,7 +104,8 @@ void PresetManager::deleteUserPreset(int index)
         auto& preset = presets[index];
         
         // Delete file
-        auto presetFile = getUserPresetsDirectory().getChildFile(preset.name + ".rsp");
+        const auto legalName = juce::File::createLegalFileName(preset.name).trim();
+        auto presetFile = getUserPresetsDirectory().getChildFile(legalName + ".rsp");
         if (presetFile.exists())
             presetFile.deleteFile();
         

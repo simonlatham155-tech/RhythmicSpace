@@ -17,9 +17,9 @@ A JUCE-based audio plugin that combines a step sequencer with five independent e
 
 | Format | Status |
 |--------|--------|
-| Audio Unit (AU) | ✅ macOS |
-| VST3 | ✅ macOS (Windows build planned) |
-| Standalone | ✅ macOS |
+| Audio Unit (AU) | macOS Intel; Apple Silicon via Rosetta 2 |
+| VST3 | macOS Intel; Apple Silicon via Rosetta 2 |
+| Standalone | macOS Intel; Apple Silicon via Rosetta 2 |
 
 ## Parameters
 
@@ -42,6 +42,9 @@ Filter Wobble · Stutter Gate · Ping Pong Delay · Space Reverb · Tremolo · A
 
 Visit the [download page](https://simonlatham155-tech.github.io/RhythmicSpace/) for installers.
 
+The current v1.0.0 binaries are Intel builds. Native Apple Silicon/universal
+binaries are planned for the next signed release.
+
 ## Building from Source
 
 ### Requirements
@@ -61,6 +64,16 @@ Visit the [download page](https://simonlatham155-tech.github.io/RhythmicSpace/) 
    - `RhythmicSpace - VST3` for VST3
    - `RhythmicSpace - Standalone Plugin` for standalone app
 6. Build with `Cmd+B` (use Release configuration for distribution)
+
+Linux Standalone and VST3 builds are also used for continuous integration.
+After building Projucer from JUCE 8.0.10:
+
+```bash
+Projucer --set-global-search-path linux defaultJuceModulePath /path/to/JUCE/modules
+Projucer --resave RhythmicSpace.jucer
+make -C Builds/LinuxMakefile CONFIG=Release Standalone
+make -C Builds/LinuxMakefile CONFIG=Release VST3
+```
 
 ### Install Locations
 

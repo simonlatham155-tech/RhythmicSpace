@@ -21,9 +21,18 @@ struct ModulationValues
  */
 struct Preset
 {
+    Preset()
+    {
+        filterSteps.fill(0.5f);
+        panSteps.fill(0.5f);
+        delaySteps.fill(0.5f);
+        reverbSteps.fill(0.5f);
+        volumeSteps.fill(0.5f);
+    }
+
     juce::String name;
     juce::String category;
-    double bpm;
+    double bpm = 120.0;
     
     // Effect parameters
     float filterCutoff = 1000.0f;
@@ -70,7 +79,7 @@ public:
     
     // Transport
     void setBPM(double newBPM);
-    double getBPM() const { return bpm; }
+    double getBPM() const { return bpm.load(); }
     
     // Step access
     void setStepValue(int parameter, int step, float value);
@@ -110,15 +119,14 @@ private:
     static constexpr int NUM_STEPS = 16;
     
     // Step data
-    std::array<std::array<float, NUM_STEPS>, NumParameters> steps;
-    mutable juce::SpinLock stepLock;
+    std::array<std::array<std::atomic<float>, NUM_STEPS>, NumParameters> steps;
     
     // Timing
-    double sampleRate = 44100.0;
-    double bpm = 120.0;
-    int samplesPerStep = 1;
-    int sampleCounter = 0;
-    int currentStep = 0;
+    std::atomic<double> sampleRate { 44100.0 };
+    std::atomic<double> bpm { 120.0 };
+    std::atomic<int> samplesPerStep { 1 };
+    std::atomic<int> sampleCounter { 0 };
+    std::atomic<int> currentStep { 0 };
     
     void updateStepTiming();
     

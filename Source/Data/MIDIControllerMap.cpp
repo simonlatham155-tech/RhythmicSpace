@@ -3,29 +3,30 @@
 //==============================================================================
 MIDIControllerMap::MIDIControllerMap()
 {
+    mappings.reserve(32);
 }
 
 void MIDIControllerMap::startLearning(const juce::String& parameterID)
 {
-    const juce::ScopedLock lock(mappingLock);
+    const juce::SpinLock::ScopedLockType lock(mappingLock);
     learningParameterID = parameterID;
 }
 
 void MIDIControllerMap::stopLearning()
 {
-    const juce::ScopedLock lock(mappingLock);
+    const juce::SpinLock::ScopedLockType lock(mappingLock);
     learningParameterID = {};
 }
 
 bool MIDIControllerMap::isLearning() const
 {
-    const juce::ScopedLock lock(mappingLock);
+    const juce::SpinLock::ScopedLockType lock(mappingLock);
     return learningParameterID.isNotEmpty();
 }
 
 juce::String MIDIControllerMap::getLearningParameterID() const
 {
-    const juce::ScopedLock lock(mappingLock);
+    const juce::SpinLock::ScopedLockType lock(mappingLock);
     return learningParameterID;
 }
 
@@ -45,7 +46,9 @@ bool MIDIControllerMap::processMIDIMessage(const juce::MidiMessage& message,
     bool hasMatchedMapping = false;
 
     {
-        const juce::ScopedLock lock(mappingLock);
+        const juce::SpinLock::ScopedTryLockType lock(mappingLock);
+        if (! lock.isLocked())
+            return false;
 
         if (learningParameterID.isNotEmpty())
         {
@@ -66,10 +69,18 @@ bool MIDIControllerMap::processMIDIMessage(const juce::MidiMessage& message,
 
             mappings.push_back(mapping);
         }
-        else if (auto* mapping = findMappingByCC(ccNumber, channel))
+        else
         {
-            matchedMapping = *mapping;
-            hasMatchedMapping = true;
+            for (const auto& mapping : mappings)
+            {
+                if (mapping.ccNumber == ccNumber
+                    && (mapping.channel == -1 || mapping.channel == channel))
+                {
+                    matchedMapping = mapping;
+                    hasMatchedMapping = true;
+                    break;
+                }
+            }
         }
     }
 
@@ -96,7 +107,7 @@ bool MIDIControllerMap::processMIDIMessage(const juce::MidiMessage& message,
 void MIDIControllerMap::addMapping(int ccNumber, int channel, const juce::String& parameterID,
                                   float minValue, float maxValue)
 {
-    const juce::ScopedLock lock(mappingLock);
+    const juce::SpinLock::ScopedLockType lock(mappingLock);
 
     mappings.erase(
         std::remove_if(mappings.begin(), mappings.end(),
@@ -115,7 +126,7 @@ void MIDIControllerMap::addMapping(int ccNumber, int channel, const juce::String
 
 void MIDIControllerMap::removeMapping(const juce::String& parameterID)
 {
-    const juce::ScopedLock lock(mappingLock);
+    const juce::SpinLock::ScopedLockType lock(mappingLock);
 
     mappings.erase(
         std::remove_if(mappings.begin(), mappings.end(),
@@ -125,47 +136,29 @@ void MIDIControllerMap::removeMapping(const juce::String& parameterID)
 
 void MIDIControllerMap::clearAllMappings()
 {
-    const juce::ScopedLock lock(mappingLock);
+    const juce::SpinLock::ScopedLockType lock(mappingLock);
     mappings.clear();
 }
 
 //==============================================================================
-MIDIControllerMap::MIDIMapping* MIDIControllerMap::getMapping(const juce::String& parameterID)
+std::optional<MIDIControllerMap::MIDIMapping> MIDIControllerMap::getMapping(
+    const juce::String& parameterID) const
 {
-    const juce::ScopedLock lock(mappingLock);
-
-    for (auto& mapping : mappings)
-    {
-        if (mapping.parameterID == parameterID)
-            return &mapping;
-    }
-
-    return nullptr;
-}
-
-const MIDIControllerMap::MIDIMapping* MIDIControllerMap::getMapping(const juce::String& parameterID) const
-{
-    const juce::ScopedLock lock(mappingLock);
+    const juce::SpinLock::ScopedLockType lock(mappingLock);
 
     for (const auto& mapping : mappings)
     {
         if (mapping.parameterID == parameterID)
-            return &mapping;
+            return mapping;
     }
 
-    return nullptr;
+    return std::nullopt;
 }
 
-MIDIControllerMap::MIDIMapping* MIDIControllerMap::findMappingByCC(int ccNumber, int channel)
+std::vector<MIDIControllerMap::MIDIMapping> MIDIControllerMap::getAllMappings() const
 {
-    for (auto& mapping : mappings)
-    {
-        if (mapping.ccNumber == ccNumber
-            && (mapping.channel == -1 || mapping.channel == channel))
-            return &mapping;
-    }
-
-    return nullptr;
+    const juce::SpinLock::ScopedLockType lock(mappingLock);
+    return mappings;
 }
 
 //==============================================================================
@@ -205,7 +198,7 @@ void MIDIControllerMap::loadArturiaMiniLab3Template()
 //==============================================================================
 juce::ValueTree MIDIControllerMap::toValueTree() const
 {
-    const juce::ScopedLock lock(mappingLock);
+    const juce::SpinLock::ScopedLockType lock(mappingLock);
     juce::ValueTree tree("MIDIControllerMap");
     
     for (const auto& mapping : mappings)
@@ -228,7 +221,7 @@ void MIDIControllerMap::fromValueTree(const juce::ValueTree& tree)
     if (! tree.hasType("MIDIControllerMap"))
         return;
     
-    const juce::ScopedLock lock(mappingLock);
+    const juce::SpinLock::ScopedLockType lock(mappingLock);
     mappings.clear();
     
     for (int i = 0; i < tree.getNumChildren(); ++i)
