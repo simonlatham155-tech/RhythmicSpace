@@ -17,7 +17,7 @@ public:
     int getFactoryPresetCount() const { return factoryPresetCount; }
     const Preset* getPreset(int index) const;
     
-    void saveUserPreset(const Preset& preset);
+    bool saveUserPreset(const Preset& preset);
     void deleteUserPreset(int index);
     void loadUserPresets();
     

@@ -33,6 +33,15 @@ struct ModulationSmoother
 
     ModulationValues advance(int numSamples)
     {
+        // Use the value at the start of this short processing chunk, then move
+        // the ramps forward so the next chunk continues the transition.
+        ModulationValues values;
+        values.filter = filter.getNextValue();
+        values.pan = pan.getNextValue();
+        values.delay = delay.getNextValue();
+        values.reverb = reverb.getNextValue();
+        values.volume = volume.getNextValue();
+
         if (numSamples > 1)
         {
             filter.skip(numSamples - 1);
@@ -42,12 +51,6 @@ struct ModulationSmoother
             volume.skip(numSamples - 1);
         }
 
-        ModulationValues values;
-        values.filter = filter.getNextValue();
-        values.pan = pan.getNextValue();
-        values.delay = delay.getNextValue();
-        values.reverb = reverb.getNextValue();
-        values.volume = volume.getNextValue();
         return values;
     }
 

@@ -106,8 +106,7 @@ private:
     std::atomic<bool> midiActivityFlag { false };
     
     int currentProgramIndex = 0;
-    double currentSampleRate = 44100.0;
-    double lastHostPpq = -1.0;
+    float previousMasterGain = 0.8f;
     
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     void syncRuntimeStateFromParameters();

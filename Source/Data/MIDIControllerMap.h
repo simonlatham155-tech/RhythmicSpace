@@ -1,6 +1,7 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include <optional>
 
 //==============================================================================
 /**
@@ -44,9 +45,8 @@ public:
                    float minValue = 0.0f, float maxValue = 1.0f);
     void removeMapping(const juce::String& parameterID);
     void clearAllMappings();
-    MIDIMapping* getMapping(const juce::String& parameterID);
-    const MIDIMapping* getMapping(const juce::String& parameterID) const;
-    const std::vector<MIDIMapping>& getAllMappings() const { return mappings; }
+    std::optional<MIDIMapping> getMapping(const juce::String& parameterID) const;
+    std::vector<MIDIMapping> getAllMappings() const;
     
     void loadTemplate(ControllerTemplate templateType);
     void loadArturiaMiniLab3Template();
@@ -55,11 +55,9 @@ public:
     void fromValueTree(const juce::ValueTree& tree);
     
 private:
-    mutable juce::CriticalSection mappingLock;
+    mutable juce::SpinLock mappingLock;
     std::vector<MIDIMapping> mappings;
     juce::String learningParameterID;
-    
-    MIDIMapping* findMappingByCC(int ccNumber, int channel);
-    
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MIDIControllerMap)
 };

@@ -100,7 +100,7 @@ RhythmicSpaceAudioProcessorEditor::RhythmicSpaceAudioProcessorEditor (RhythmicSp
     // No need for brandingLabel component anymore
     
     // Set window size constraints and resizable corner
-    resizeLimits.setMinimumSize(800, 600);
+    resizeLimits.setMinimumSize(1200, 720);
     resizeLimits.setMaximumSize(2400, 1600);
     
     resizableCorner = std::make_unique<juce::ResizableCornerComponent>(this, &resizeLimits);
@@ -324,8 +324,12 @@ void RhythmicSpaceAudioProcessorEditor::timerCallback()
     reverbStepSequencer->setCurrentStep(currentStep);
     volumeStepSequencer->setCurrentStep(currentStep);
     
+   #if ! JucePlugin_Build_Standalone
+    transport->syncFromProcessor();
+   #else
     if (audioProcessor.isHostSyncEnabled())
         transport->syncFromProcessor();
+   #endif
 
     inputMeter->setLevel(audioProcessor.getInputLevel());
     outputMeter->setLevel(audioProcessor.getOutputLevel());

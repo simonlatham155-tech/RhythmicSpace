@@ -117,11 +117,20 @@ bool RhythmicSpaceAudioProcessor::isMidiEffect() const
 
 double RhythmicSpaceAudioProcessor::getTailLengthSeconds() const
 {
-    const float delaySeconds = parameters.getRawParameterValue("delayTime")->load() / 1000.0f;
-    const float feedback = parameters.getRawParameterValue("delayFeedback")->load() / 100.0f;
-    const float delayTail = delaySeconds * (1.0f + feedback * 4.0f);
+    const double delaySeconds = parameters.getRawParameterValue("delayTime")->load() / 1000.0;
+    const double feedback = parameters.getRawParameterValue("delayFeedback")->load() / 100.0;
+
+    double delayTail = delaySeconds;
+    if (feedback > 0.001)
+    {
+        constexpr double silenceThreshold = 0.001; // -60 dB
+        const double repeats = std::ceil(std::log(silenceThreshold) / std::log(feedback));
+        delayTail *= juce::jmax(1.0, repeats);
+    }
+
+    delayTail = juce::jmin(delayTail, 120.0);
     constexpr double reverbTail = 3.0;
-    return static_cast<double>(delayTail) + reverbTail;
+    return delayTail + reverbTail;
 }
 
 int RhythmicSpaceAudioProcessor::getNumPrograms()
@@ -154,8 +163,6 @@ void RhythmicSpaceAudioProcessor::changeProgramName (int index, const juce::Stri
 //==============================================================================
 void RhythmicSpaceAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    currentSampleRate = sampleRate;
-    
     juce::dsp::ProcessSpec spec;
     spec.sampleRate = sampleRate;
     spec.maximumBlockSize = static_cast<uint32_t>(samplesPerBlock);
@@ -168,6 +175,7 @@ void RhythmicSpaceAudioProcessor::prepareToPlay (double sampleRate, int samplesP
     reverbProcessor.prepare(spec);
     panProcessor.prepare(spec);
     volumeProcessor.prepare(spec);
+    previousMasterGain = parameters.getRawParameterValue("masterVolume")->load() / 100.0f;
 }
 
 void RhythmicSpaceAudioProcessor::releaseResources()
@@ -201,39 +209,39 @@ bool RhythmicSpaceAudioProcessor::isBusesLayoutSupported (const BusesLayout& lay
 
 void RhythmicSpaceAudioProcessor::updateHostTransportState()
 {
-    if (! hostSyncEnabled.load())
-        return;
-
     if (auto* playHead = getPlayHead())
     {
         if (auto position = playHead->getPosition())
         {
-            if (position->getBpm().hasValue())
-            {
-                const double hostBpm = *position->getBpm();
+            const bool hostPlaying = position->getIsPlaying();
 
-                if (hostBpm != bpm.load())
+            if (hostSyncEnabled.load())
+            {
+                if (position->getBpm().hasValue())
                 {
-                    bpm.store(hostBpm);
-                    stepSequencer.setBPM(hostBpm);
+                    const double hostBpm = *position->getBpm();
+
+                    if (hostBpm != bpm.load())
+                    {
+                        bpm.store(hostBpm);
+                        stepSequencer.setBPM(hostBpm);
+                    }
+                }
+
+                playing.store(hostPlaying);
+
+                if (position->getPpqPosition().hasValue())
+                {
+                    const double hostPpq = *position->getPpqPosition();
+                    stepSequencer.syncToHostPpq(hostPpq);
                 }
             }
-
-            if (position->getIsPlaying().hasValue())
-                playing.store(*position->getIsPlaying());
-
-            if (position->getPpqPosition().hasValue())
+           #if ! JucePlugin_Build_Standalone
+            else
             {
-                const double hostPpq = *position->getPpqPosition();
-                const bool hostPlaying = playing.load();
-                const bool hostJumped = lastHostPpq < 0.0
-                                     || std::abs(hostPpq - lastHostPpq) > 0.25;
-
-                if (hostPlaying || hostJumped)
-                    stepSequencer.syncToHostPpq(hostPpq);
-
-                lastHostPpq = hostPpq;
+                playing.store(hostPlaying);
             }
+           #endif
         }
     }
 }
@@ -303,17 +311,19 @@ void RhythmicSpaceAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer
 
     updateHostTransportState();
 
+    // Effect processors accept one modulation value per block. Short chunks
+    // make the 10 ms parameter ramps effective without per-sample DSP calls.
+    constexpr int smoothingChunkSize = 32;
     const float masterVol = parameters.getRawParameterValue("masterVolume")->load() / 100.0f;
+    const bool isRunning = playing.load();
     int startSample = 0;
     const int numSamples = buffer.getNumSamples();
 
     while (startSample < numSamples)
     {
         int samplesToProcess = stepSequencer.getSamplesUntilNextStep();
+        samplesToProcess = juce::jmin(samplesToProcess, smoothingChunkSize);
         samplesToProcess = juce::jmin(samplesToProcess, numSamples - startSample);
-
-        if (! hostSyncEnabled.load() && playing.load())
-            stepSequencer.advance(samplesToProcess);
 
         const auto modValues = stepSequencer.getCurrentModulationValues();
         modulationSmoother.setTargets(modValues);
@@ -323,11 +333,19 @@ void RhythmicSpaceAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer
         auto subBlock = fullBlock.getSubBlock((size_t) startSample, (size_t) samplesToProcess);
         juce::dsp::ProcessContextReplacing<float> context(subBlock);
 
+        // The current step owns every sample up to its boundary. Advance only
+        // after those samples have been processed.
         processEffectChain(context, smoothedMod);
-        subBlock.multiplyBy(masterVol);
+
+        if (isRunning)
+            stepSequencer.advance(samplesToProcess);
 
         startSample += samplesToProcess;
     }
+
+    if (numSamples > 0)
+        buffer.applyGainRamp(0, numSamples, previousMasterGain, masterVol);
+    previousMasterGain = masterVol;
 
     float outputPeak = 0.0f;
     for (int ch = 0; ch < totalNumOutputChannels; ++ch)
@@ -444,9 +462,6 @@ void RhythmicSpaceAudioProcessor::setBPM(double newBPM)
 void RhythmicSpaceAudioProcessor::setHostSyncEnabled(bool enabled)
 {
     hostSyncEnabled.store(enabled);
-
-    if (enabled)
-        lastHostPpq = -1.0;
 }
 
 void RhythmicSpaceAudioProcessor::loadPreset(int presetIndex)

@@ -156,7 +156,15 @@ void PresetBrowserComponent::showSavePresetDialog()
                     processor.getParameters()
                 );
                 
-                presetManager.saveUserPreset(preset);
+                if (! presetManager.saveUserPreset(preset))
+                {
+                    juce::AlertWindow::showMessageBoxAsync(
+                        juce::AlertWindow::WarningIcon,
+                        "Preset Not Saved",
+                        "RhythmicSpace could not write the preset file. Check the preset name and folder permissions."
+                    );
+                    return;
+                }
                 
                 int savedIndex = -1;
                 for (int i = 0; i < presetManager.getNumPresets(); ++i)
@@ -178,6 +186,5 @@ void PresetBrowserComponent::showSavePresetDialog()
                 );
             }
         }
-        delete window;
     }), true);
 }
