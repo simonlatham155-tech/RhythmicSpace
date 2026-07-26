@@ -59,7 +59,9 @@ jobs:
 
           $project.Save($projectPath)
 
-          & $projucer --resave $projectPath
+          Start-Process -FilePath $projucer `
+            -ArgumentList @("--resave", $projectPath) `
+            -Wait -NoNewWindow
 
           $solution = "Builds\VisualStudio2022\RhythmicSpace.sln"
           if (-not (Test-Path $solution)) {
