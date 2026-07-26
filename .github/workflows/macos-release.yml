@@ -182,8 +182,9 @@ jobs:
           cat > release-notes.md <<'EOF'
           ## RhythmicSpace v1.0.1-beta.1
 
-          Hardened public beta containing the transport, timing, host-sync,
-          audio-thread safety, preset and release-delivery fixes from PR #5.
+          Hardened public beta containing transport, timing, host-sync,
+          automation wiring, audio-thread safety, preset and release-delivery
+          fixes.
 
           ### macOS Intel
 

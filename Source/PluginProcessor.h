@@ -16,7 +16,8 @@
  * RhythmicSpace Audio Processor
  * Step sequencer-based multi-effect processor with rhythmic modulation
  */
-class RhythmicSpaceAudioProcessor  : public juce::AudioProcessor
+class RhythmicSpaceAudioProcessor  : public juce::AudioProcessor,
+                                     private juce::AudioProcessorValueTreeState::Listener
 {
 public:
     //==============================================================================
@@ -109,6 +110,7 @@ private:
     float previousMasterGain = 0.8f;
     
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+    void parameterChanged(const juce::String& parameterID, float newValue) override;
     void syncRuntimeStateFromParameters();
     void applyPresetParameters(const Preset& preset);
     int getFilterTypeIndex() const;

@@ -29,10 +29,15 @@ RhythmicSpaceAudioProcessor::RhythmicSpaceAudioProcessor()
 #endif
     parameters(*this, nullptr, "PARAMETERS", createParameterLayout())
 {
+    parameters.addParameterListener("playing", this);
+    parameters.addParameterListener("bpm", this);
+    syncRuntimeStateFromParameters();
 }
 
 RhythmicSpaceAudioProcessor::~RhythmicSpaceAudioProcessor()
 {
+    parameters.removeParameterListener("playing", this);
+    parameters.removeParameterListener("bpm", this);
 }
 
 //==============================================================================
@@ -410,11 +415,25 @@ void RhythmicSpaceAudioProcessor::setStateInformation (const void* data, int siz
 void RhythmicSpaceAudioProcessor::syncRuntimeStateFromParameters()
 {
     if (auto* playingParam = parameters.getRawParameterValue("playing"))
-        playing.store(playingParam->load() >= 0.5f);
+        parameterChanged("playing", playingParam->load());
 
     if (auto* bpmParam = parameters.getRawParameterValue("bpm"))
+        parameterChanged("bpm", bpmParam->load());
+}
+
+void RhythmicSpaceAudioProcessor::parameterChanged(const juce::String& parameterID, float newValue)
+{
+    if (parameterID == "playing")
     {
-        const double newBpm = bpmParam->load();
+        const bool shouldPlay = newValue >= 0.5f;
+        const bool wasPlaying = playing.exchange(shouldPlay);
+
+        if (shouldPlay && ! wasPlaying)
+            stepSequencer.reset();
+    }
+    else if (parameterID == "bpm")
+    {
+        const double newBpm = juce::jlimit(60.0, 240.0, static_cast<double>(newValue));
         bpm.store(newBpm);
         stepSequencer.setBPM(newBpm);
     }
@@ -443,20 +462,18 @@ void RhythmicSpaceAudioProcessor::applyPresetParameters(const Preset& preset)
 //==============================================================================
 void RhythmicSpaceAudioProcessor::setPlaying(bool shouldPlay)
 {
-    playing.store(shouldPlay);
-
     if (auto* param = parameters.getParameter("playing"))
         param->setValueNotifyingHost(shouldPlay ? 1.0f : 0.0f);
-
-    if (shouldPlay)
-        stepSequencer.reset();
+    else
+        parameterChanged("playing", shouldPlay ? 1.0f : 0.0f);
 }
 
 void RhythmicSpaceAudioProcessor::setBPM(double newBPM)
 {
-    bpm.store(newBPM);
-    stepSequencer.setBPM(newBPM);
-    setParameterValue(parameters, "bpm", static_cast<float>(newBPM));
+    if (parameters.getParameter("bpm") != nullptr)
+        setParameterValue(parameters, "bpm", static_cast<float>(newBPM));
+    else
+        parameterChanged("bpm", static_cast<float>(newBPM));
 }
 
 void RhythmicSpaceAudioProcessor::setHostSyncEnabled(bool enabled)
