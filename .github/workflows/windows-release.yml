@@ -60,8 +60,10 @@ jobs:
           $project.Save($projectPath)
 
           & $projucer --resave $projectPath
-          if ($LASTEXITCODE -ne 0) {
-            throw "Failed to generate the Visual Studio project."
+
+          $solution = "Builds\VisualStudio2022\RhythmicSpace.sln"
+          if (-not (Test-Path $solution)) {
+            throw "Projucer did not generate $solution."
           }
 
       - name: Build Windows VST3 and Standalone
