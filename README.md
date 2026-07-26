@@ -42,8 +42,8 @@ Filter Wobble · Stutter Gate · Ping Pong Delay · Space Reverb · Tremolo · A
 
 Visit the [download page](https://simonlatham155-tech.github.io/RhythmicSpace/) for installers.
 
-The current v1.0.0 binaries are Intel builds. Native Apple Silicon/universal
-binaries are planned for the next signed release.
+The current v1.0.1 beta binaries are Intel builds. Native Apple
+Silicon/universal binaries are planned for a future signed release.
 
 ## Building from Source
 

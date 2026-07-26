@@ -1,0 +1,212 @@
+name: macOS Intel release
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+env:
+  RELEASE_TAG: v1.0.1-beta.1
+  RELEASE_LABEL: v1.0.1-beta.1
+  MACOS_DEPLOYMENT_TARGET: "10.13"
+
+jobs:
+  macos-intel:
+    runs-on: macos-15-intel
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out RhythmicSpace
+        uses: actions/checkout@v4
+
+      - name: Fetch JUCE 8.0.10
+        run: git clone --branch 8.0.10 --depth 1 https://github.com/juce-framework/JUCE.git "$RUNNER_TEMP/JUCE"
+
+      - name: Build Projucer
+        run: |
+          xcodebuild \
+            -project "$RUNNER_TEMP/JUCE/extras/Projucer/Builds/MacOSX/Projucer.xcodeproj" \
+            -configuration Release \
+            -jobs 2 \
+            ARCHS=x86_64 \
+            ONLY_ACTIVE_ARCH=YES \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Generate Xcode project
+        run: |
+          projucer="$RUNNER_TEMP/JUCE/extras/Projucer/Builds/MacOSX/build/Release/Projucer.app/Contents/MacOS/Projucer"
+          if [[ ! -x "$projucer" ]]; then
+            echo "Projucer was not built at $projucer" >&2
+            exit 1
+          fi
+
+          # Use self-contained module paths on a clean runner rather than relying
+          # on a user-level Projucer settings file.
+          perl -0pi -e '
+            s{useGlobalPath="1"}{useGlobalPath="0"}g;
+            s{(<MODULEPATH\b[^>]*\bpath=")[^"]*(")}
+             {$1 . $ENV{"RUNNER_TEMP"} . "/JUCE/modules" . $2}ge;
+          ' RhythmicSpace.jucer
+
+          "$projucer" --resave RhythmicSpace.jucer || true
+
+          project="Builds/MacOSX/RhythmicSpace.xcodeproj"
+          if [[ ! -d "$project" ]]; then
+            echo "Projucer did not generate $project" >&2
+            exit 1
+          fi
+
+      - name: Build macOS AU, VST3 and Standalone
+        run: |
+          xcodebuild \
+            -project Builds/MacOSX/RhythmicSpace.xcodeproj \
+            -configuration Release \
+            -alltargets \
+            -jobs 2 \
+            ARCHS=x86_64 \
+            ONLY_ACTIVE_ARCH=NO \
+            MACOSX_DEPLOYMENT_TARGET="$MACOS_DEPLOYMENT_TARGET" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
+
+      - name: Validate and package macOS builds
+        run: |
+          output="Builds/MacOSX/build/Release"
+          vst3="$output/RhythmicSpace.vst3"
+          component="$output/RhythmicSpace.component"
+          app="$output/RhythmicSpace.app"
+
+          for bundle in "$vst3" "$component" "$app"; do
+            if [[ ! -d "$bundle" ]]; then
+              echo "Missing expected bundle: $bundle" >&2
+              exit 1
+            fi
+
+            binary="$bundle/Contents/MacOS/RhythmicSpace"
+            if [[ ! -f "$binary" ]]; then
+              echo "Missing expected binary: $binary" >&2
+              exit 1
+            fi
+
+            archs="$(lipo -archs "$binary")"
+            if [[ "$archs" != "x86_64" ]]; then
+              echo "Unexpected architecture for $binary: $archs" >&2
+              exit 1
+            fi
+
+            codesign --force --deep --sign - "$bundle"
+            codesign --verify --deep --strict --verbose=2 "$bundle"
+            xcrun vtool -show-build "$binary"
+          done
+
+          mkdir -p dist
+
+          vst3_stage="$RUNNER_TEMP/RhythmicSpace-VST3-macOS-x86_64-$RELEASE_LABEL"
+          mkdir -p "$vst3_stage"
+          cp -R "$vst3" "$vst3_stage/"
+          printf '%s\n' \
+            "RhythmicSpace $RELEASE_LABEL - macOS Intel VST3" \
+            "" \
+            "Copy RhythmicSpace.vst3 to:" \
+            "~/Library/Audio/Plug-Ins/VST3/" \
+            "" \
+            "JUCE is not required to use the plugin." \
+            "This beta is ad-hoc signed but not Apple-notarized." \
+            > "$vst3_stage/INSTALL.txt"
+          ditto -c -k --sequesterRsrc "$vst3_stage" \
+            "dist/RhythmicSpace-VST3-macOS-x86_64-$RELEASE_LABEL.zip"
+
+          au_stage="$RUNNER_TEMP/RhythmicSpace-AU-macOS-x86_64-$RELEASE_LABEL"
+          mkdir -p "$au_stage"
+          cp -R "$component" "$au_stage/"
+          printf '%s\n' \
+            "RhythmicSpace $RELEASE_LABEL - macOS Intel Audio Unit" \
+            "" \
+            "Copy RhythmicSpace.component to:" \
+            "~/Library/Audio/Plug-Ins/Components/" \
+            "" \
+            "JUCE is not required to use the plugin." \
+            "This beta is ad-hoc signed but not Apple-notarized." \
+            > "$au_stage/INSTALL.txt"
+          ditto -c -k --sequesterRsrc "$au_stage" \
+            "dist/RhythmicSpace-AU-macOS-x86_64-$RELEASE_LABEL.zip"
+
+          app_stage="$RUNNER_TEMP/RhythmicSpace-Standalone-macOS-x86_64-$RELEASE_LABEL"
+          mkdir -p "$app_stage"
+          cp -R "$app" "$app_stage/"
+          printf '%s\n' \
+            "RhythmicSpace $RELEASE_LABEL - macOS Intel Standalone" \
+            "" \
+            "Copy RhythmicSpace.app to /Applications/ and open it." \
+            "JUCE is not required." \
+            "This beta is ad-hoc signed but not Apple-notarized." \
+            > "$app_stage/README.txt"
+          ditto -c -k --sequesterRsrc "$app_stage" \
+            "dist/RhythmicSpace-Standalone-macOS-x86_64-$RELEASE_LABEL.zip"
+
+          shasum -a 256 dist/*.zip > dist/SHA256SUMS-macOS.txt
+
+      - name: Upload validation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: RhythmicSpace-macOS-x86_64-${{ env.RELEASE_LABEL }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Attach macOS builds to beta release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "$RELEASE_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" \
+              --repo "${{ github.repository }}" \
+              --target "$GITHUB_SHA" \
+              --title "RhythmicSpace $RELEASE_LABEL" \
+              --prerelease \
+              --notes "Initial cross-platform beta release."
+          fi
+
+          gh release upload "$RELEASE_TAG" dist/* \
+            --repo "${{ github.repository }}" \
+            --clobber
+
+          cat > release-notes.md <<'EOF'
+          ## RhythmicSpace v1.0.1-beta.1
+
+          Hardened public beta containing the transport, timing, host-sync,
+          audio-thread safety, preset and release-delivery fixes from PR #5.
+
+          ### macOS Intel
+
+          - **VST3:** copy `RhythmicSpace.vst3` to
+            `~/Library/Audio/Plug-Ins/VST3/`.
+          - **Audio Unit:** copy `RhythmicSpace.component` to
+            `~/Library/Audio/Plug-Ins/Components/`.
+          - **Standalone:** copy `RhythmicSpace.app` to `/Applications/`.
+          - Compatible with macOS 10.13 or later on Intel Macs.
+          - Apple Silicon Macs can run the Intel builds through Rosetta 2.
+
+          ### Windows 64-bit
+
+          - **VST3:** copy `RhythmicSpace.vst3` to
+            `C:\Program Files\Common Files\VST3`.
+          - **Standalone:** unzip and run `RhythmicSpace.exe`.
+
+          Users do **not** need to install JUCE.
+
+          These beta builds are not Developer ID signed or Apple-notarized.
+          Test project recall, transport changes, automation and presets before
+          relying on the plugin in a live performance.
+          EOF
+
+          gh release edit "$RELEASE_TAG" \
+            --repo "${{ github.repository }}" \
+            --title "RhythmicSpace $RELEASE_LABEL" \
+            --notes-file release-notes.md \
+            --prerelease
