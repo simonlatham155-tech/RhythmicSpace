@@ -43,12 +43,23 @@ jobs:
             throw "Projucer was not built at $projucer"
           }
 
-          & $projucer --set-global-search-path windows defaultJuceModulePath "$env:RUNNER_TEMP\JUCE\modules"
-          if ($LASTEXITCODE -ne 0) {
-            throw "Failed to configure the JUCE module path."
+          # A fresh Windows runner has no Projucer.settings file, so configure the
+          # checked-out project directly instead of relying on global settings.
+          $projectPath = Join-Path (Get-Location) "RhythmicSpace.jucer"
+          $modulePath = "$env:RUNNER_TEMP\JUCE\modules"
+          [xml] $project = Get-Content -Path $projectPath -Raw
+
+          foreach ($module in $project.JUCERPROJECT.MODULES.MODULE) {
+            $module.SetAttribute("useGlobalPath", "0")
           }
 
-          & $projucer --resave RhythmicSpace.jucer
+          foreach ($path in $project.SelectNodes("//MODULEPATH")) {
+            $path.SetAttribute("path", $modulePath)
+          }
+
+          $project.Save($projectPath)
+
+          & $projucer --resave $projectPath
           if ($LASTEXITCODE -ne 0) {
             throw "Failed to generate the Visual Studio project."
           }
