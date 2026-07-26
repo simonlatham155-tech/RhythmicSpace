@@ -148,7 +148,10 @@ jobs:
           ditto -c -k --sequesterRsrc "$app_stage" \
             "dist/RhythmicSpace-Standalone-macOS-x86_64-$RELEASE_LABEL.zip"
 
-          shasum -a 256 dist/*.zip > dist/SHA256SUMS-macOS.txt
+          (
+            cd dist
+            shasum -a 256 *.zip > SHA256SUMS-macOS.txt
+          )
 
       - name: Upload validation artifacts
         uses: actions/upload-artifact@v4
