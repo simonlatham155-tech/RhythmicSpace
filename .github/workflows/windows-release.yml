@@ -1,0 +1,182 @@
+name: Windows VST3 release
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+env:
+  RELEASE_TAG: v1.0.1-beta.1
+  RELEASE_LABEL: v1.0.1-beta.1
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out RhythmicSpace
+        uses: actions/checkout@v4
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Fetch JUCE 8.0.10
+        shell: pwsh
+        run: git clone --branch 8.0.10 --depth 1 https://github.com/juce-framework/JUCE.git "$env:RUNNER_TEMP\JUCE"
+
+      - name: Build Projucer
+        shell: pwsh
+        run: |
+          msbuild "$env:RUNNER_TEMP\JUCE\extras\Projucer\Builds\VisualStudio2022\Projucer.sln" `
+            /m:2 /p:Configuration=Release /p:Platform=x64
+
+      - name: Generate Visual Studio project
+        shell: pwsh
+        run: |
+          $projucer = "$env:RUNNER_TEMP\JUCE\extras\Projucer\Builds\VisualStudio2022\x64\Release\App\Projucer.exe"
+          if (-not (Test-Path $projucer)) {
+            throw "Projucer was not built at $projucer"
+          }
+
+          # A fresh Windows runner has no Projucer.settings file, so configure the
+          # checked-out project directly instead of relying on global settings.
+          $projectPath = Join-Path (Get-Location) "RhythmicSpace.jucer"
+          $modulePath = "$env:RUNNER_TEMP\JUCE\modules"
+          [xml] $project = Get-Content -Path $projectPath -Raw
+
+          foreach ($module in $project.JUCERPROJECT.MODULES.MODULE) {
+            $module.SetAttribute("useGlobalPath", "0")
+          }
+
+          foreach ($path in $project.SelectNodes("//MODULEPATH")) {
+            $path.SetAttribute("path", $modulePath)
+          }
+
+          $project.Save($projectPath)
+
+          Start-Process -FilePath $projucer `
+            -ArgumentList @("--resave", $projectPath) `
+            -Wait -NoNewWindow
+
+          $solution = "Builds\VisualStudio2022\RhythmicSpace.sln"
+          if (-not (Test-Path $solution)) {
+            throw "Projucer did not generate $solution."
+          }
+
+      - name: Build Windows VST3 and Standalone
+        shell: pwsh
+        run: |
+          msbuild "Builds\VisualStudio2022\RhythmicSpace.sln" `
+            /m:2 /p:Configuration=Release /p:Platform=x64
+
+      - name: Package Windows builds
+        shell: pwsh
+        run: |
+          $vst3 = Get-ChildItem -Path Builds -Directory -Filter RhythmicSpace.vst3 -Recurse |
+            Select-Object -First 1
+          if ($null -eq $vst3) {
+            throw "RhythmicSpace.vst3 was not produced."
+          }
+
+          $standalone = Get-ChildItem -Path Builds -File -Filter RhythmicSpace.exe -Recurse |
+            Sort-Object Length -Descending |
+            Select-Object -First 1
+          if ($null -eq $standalone) {
+            throw "RhythmicSpace.exe was not produced."
+          }
+
+          New-Item -ItemType Directory -Force dist | Out-Null
+
+          $vst3Stage = Join-Path $env:RUNNER_TEMP "RhythmicSpace-VST3-Windows-x64-$env:RELEASE_LABEL"
+          New-Item -ItemType Directory -Force $vst3Stage | Out-Null
+          Copy-Item -Path $vst3.FullName -Destination (Join-Path $vst3Stage "RhythmicSpace.vst3") -Recurse
+          @"
+          RhythmicSpace $env:RELEASE_LABEL - Windows 64-bit VST3
+
+          Installation:
+          1. Copy RhythmicSpace.vst3 to:
+             C:\Program Files\Common Files\VST3
+          2. Rescan plugins in your DAW.
+
+          JUCE is not required to use the plugin.
+          This unsigned beta may show a Windows security warning.
+          "@ | Set-Content -Path (Join-Path $vst3Stage "INSTALL.txt") -Encoding utf8
+
+          $vst3Zip = "dist\RhythmicSpace-VST3-Windows-x64-$env:RELEASE_LABEL.zip"
+          Compress-Archive -Path "$vst3Stage\*" -DestinationPath $vst3Zip
+
+          $appStage = Join-Path $env:RUNNER_TEMP "RhythmicSpace-Standalone-Windows-x64-$env:RELEASE_LABEL"
+          New-Item -ItemType Directory -Force $appStage | Out-Null
+          Copy-Item -Path $standalone.FullName -Destination (Join-Path $appStage "RhythmicSpace.exe")
+          @"
+          RhythmicSpace $env:RELEASE_LABEL - Windows 64-bit Standalone
+
+          No DAW or JUCE installation is required.
+          This unsigned beta may show a Windows security warning.
+          "@ | Set-Content -Path (Join-Path $appStage "README.txt") -Encoding utf8
+
+          $appZip = "dist\RhythmicSpace-Standalone-Windows-x64-$env:RELEASE_LABEL.zip"
+          Compress-Archive -Path "$appStage\*" -DestinationPath $appZip
+
+          Get-FileHash -Algorithm SHA256 -Path $vst3Zip, $appZip |
+            ForEach-Object { "$($_.Hash.ToLower())  $(Split-Path $_.Path -Leaf)" } |
+            Set-Content -Path "dist\SHA256SUMS.txt" -Encoding ascii
+
+      - name: Upload validation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: RhythmicSpace-Windows-${{ env.RELEASE_LABEL }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish Windows beta release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$env:RELEASE_TAG" --repo "${{ github.repository }}" 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Release $env:RELEASE_TAG already exists; leaving it unchanged."
+            exit 0
+          }
+
+          @"
+          ## RhythmicSpace $env:RELEASE_LABEL — Windows beta
+
+          This beta contains the transport, timing, host-sync, audio-thread safety,
+          preset and release-delivery fixes merged in PR #5.
+
+          ### Downloads
+
+          - **Windows VST3:** copy `RhythmicSpace.vst3` to
+            `C:\Program Files\Common Files\VST3`, then rescan plugins in your DAW.
+          - **Windows Standalone:** unzip and run `RhythmicSpace.exe`.
+
+          Users do **not** need to install JUCE.
+
+          ### Requirements
+
+          - Windows 10 or later
+          - 64-bit Intel or AMD processor
+          - A 64-bit VST3 host for the plugin build
+
+          This is an unsigned public beta. Test project recall, transport changes,
+          automation and preset loading before relying on it in a live performance.
+          "@ | Set-Content -Path release-notes.md -Encoding utf8
+
+          gh release create "$env:RELEASE_TAG" `
+            "dist\RhythmicSpace-VST3-Windows-x64-$env:RELEASE_LABEL.zip" `
+            "dist\RhythmicSpace-Standalone-Windows-x64-$env:RELEASE_LABEL.zip" `
+            "dist\SHA256SUMS.txt" `
+            --repo "${{ github.repository }}" `
+            --target "$env:GITHUB_SHA" `
+            --title "RhythmicSpace $env:RELEASE_LABEL (Windows)" `
+            --notes-file release-notes.md `
+            --prerelease
